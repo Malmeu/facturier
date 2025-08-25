@@ -1,4 +1,6 @@
 // Print utilities for billing documents
+import { TemplateUtils } from './templateSystem'
+
 export class PrintManager {
   static printDocument(elementId, title = 'Document', templateId = 'classic') {
     try {
@@ -29,70 +31,8 @@ export class PrintManager {
   }
 
   static getTemplateCSS(templateId) {
-    // Define template colors and styles
-    const templates = {
-      classic: {
-        primary: '#1f2937',
-        secondary: '#6b7280',
-        accent: '#3b82f6',
-        headerGradient: 'linear-gradient(135deg, #1f2937 0%, #374151 100%)',
-        accentGradient: 'linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%)',
-        border: '#e5e7eb'
-      },
-      modern: {
-        primary: '#6366f1',
-        secondary: '#8b5cf6',
-        accent: '#06b6d4',
-        headerGradient: 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)',
-        accentGradient: 'linear-gradient(135deg, #06b6d4 0%, #0891b2 100%)',
-        border: '#e0e7ff'
-      },
-      elegant: {
-        primary: '#92400e',
-        secondary: '#d97706',
-        accent: '#f59e0b',
-        headerGradient: 'linear-gradient(135deg, #92400e 0%, #d97706 100%)',
-        accentGradient: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)',
-        border: '#fef3c7'
-      },
-      fresh: {
-        primary: '#059669',
-        secondary: '#10b981',
-        accent: '#34d399',
-        headerGradient: 'linear-gradient(135deg, #059669 0%, #10b981 100%)',
-        accentGradient: 'linear-gradient(135deg, #34d399 0%, #10b981 100%)',
-        border: '#d1fae5'
-      },
-      corporate: {
-        primary: '#1e40af',
-        secondary: '#3b82f6',
-        accent: '#60a5fa',
-        headerGradient: 'linear-gradient(135deg, #1e40af 0%, #3b82f6 100%)',
-        accentGradient: 'linear-gradient(135deg, #60a5fa 0%, #3b82f6 100%)',
-        border: '#dbeafe'
-      },
-      vibrant: {
-        primary: '#dc2626',
-        secondary: '#f97316',
-        accent: '#eab308',
-        headerGradient: 'linear-gradient(135deg, #dc2626 0%, #f97316 100%)',
-        accentGradient: 'linear-gradient(135deg, #eab308 0%, #f97316 100%)',
-        border: '#fed7d7'
-      }
-    }
-
-    const template = templates[templateId] || templates.classic
-
-    return `
-      .template-${templateId} {
-        --template-primary: ${template.primary};
-        --template-secondary: ${template.secondary};
-        --template-accent: ${template.accent};
-        --template-header-gradient: ${template.headerGradient};
-        --template-accent-gradient: ${template.accentGradient};
-        --template-border: ${template.border};
-      }
-    `
+    // Use the centralized template system
+    return TemplateUtils.generateTemplateCSS(templateId)
   }
 
   static createPrintHTML(content, title, templateId = 'classic') {
