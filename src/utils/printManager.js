@@ -286,24 +286,264 @@ export class PrintManager {
     `
   }
 
-  // Print preview functionality
-  static showPrintPreview(elementId) {
+  // Print order functionality
+  static printOrder(order, options = {}) {
     try {
-      const element = document.getElementById(elementId)
-      if (!element) {
-        throw new Error(`Element with id '${elementId}' not found`)
-      }
-
-      // Create preview window
-      const previewWindow = window.open('', '_blank', 'width=800,height=600')
-      const previewHTML = this.createPrintHTML(element.innerHTML, "Aperçu d'impression")
+      // Create a temporary element with order content
+      const tempDiv = document.createElement('div')
+      tempDiv.id = 'temp-order-print'
+      tempDiv.innerHTML = this.generateOrderHTML(order, options)
+      tempDiv.style.display = 'none'
       
-      previewWindow.document.write(previewHTML)
-      previewWindow.document.close()
+      document.body.appendChild(tempDiv)
+      
+      // Print the order
+      this.printDocument('temp-order-print', `Bon de Commande ${order.number}`)
+      
+      // Clean up
+      setTimeout(() => {
+        document.body.removeChild(tempDiv)
+      }, 1000)
       
     } catch (error) {
-      console.error('Error showing print preview:', error)
-      alert("Erreur lors de l'aperçu d'impression.")
+      console.error('Error printing order:', error)
+      alert("Erreur lors de l'impression du bon de commande.")
     }
+  }
+
+  // Print delivery functionality
+  static printDelivery(delivery, options = {}) {
+    try {
+      // Create a temporary element with delivery content
+      const tempDiv = document.createElement('div')
+      tempDiv.id = 'temp-delivery-print'
+      tempDiv.innerHTML = this.generateDeliveryHTML(delivery, options)
+      tempDiv.style.display = 'none'
+      
+      document.body.appendChild(tempDiv)
+      
+      // Print the delivery
+      this.printDocument('temp-delivery-print', `Bon de Livraison ${delivery.number}`)
+      
+      // Clean up
+      setTimeout(() => {
+        document.body.removeChild(tempDiv)
+      }, 1000)
+      
+    } catch (error) {
+      console.error('Error printing delivery:', error)
+      alert("Erreur lors de l'impression du bon de livraison.")
+    }
+  }
+
+  static generateOrderHTML(order, options = {}) {
+    const template = options.template || 'classic'
+    const logo = options.logo
+    
+    return `
+      <div class="order-document template-${template}">
+        <!-- Header -->
+        <div class="order-header document-header">
+          <div style="display: flex; justify-content: space-between; align-items: center; padding: 20px;">
+            <div style="display: flex; align-items: center;">
+              ${logo ? `<img src="${logo}" alt="Logo" style="width: 60px; height: 60px; object-fit: contain; margin-right: 20px; background: white; padding: 5px; border-radius: 5px;" />` : ''}
+              <div>
+                <div class="order-title" style="font-size: 24px; font-weight: bold; color: white;">BON DE COMMANDE</div>
+                <div style="color: white; opacity: 0.9;">N° ${order.number}</div>
+              </div>
+            </div>
+            <div style="text-align: right; color: white; opacity: 0.9;">
+              <div>Date: ${order.date}</div>
+              <div>Livraison: ${order.dueDate}</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Company and Supplier Info -->
+        <div style="display: flex; justify-content: space-between; margin: 30px 0; gap: 20px;">
+          <div class="company-info" style="flex: 1;">
+            <div class="document-accent" style="padding: 10px; margin-bottom: 10px; border-radius: 5px;">
+              <h3 style="margin: 0; color: white;">Acheteur:</h3>
+            </div>
+            <div><strong>${order.company.name || "Nom de l'entreprise"}</strong></div>
+            <div>${order.company.address || ''}</div>
+            <div>${order.company.city || ''} ${order.company.postalCode || ''}</div>
+            ${order.company.taxId ? `<div>NIF: ${order.company.taxId}</div>` : ''}
+            <div>${order.company.phone || ''}</div>
+            <div>${order.company.email || ''}</div>
+          </div>
+          <div class="supplier-info" style="flex: 1;">
+            <div class="document-accent" style="padding: 10px; margin-bottom: 10px; border-radius: 5px;">
+              <h3 style="margin: 0; color: white;">Fournisseur:</h3>
+            </div>
+            <div><strong>${order.supplier.name || 'Nom du fournisseur'}</strong></div>
+            <div>${order.supplier.address || ''}</div>
+            <div>${order.supplier.city || ''} ${order.supplier.postalCode || ''}</div>
+            <div>${order.supplier.phone || ''}</div>
+            <div>${order.supplier.email || ''}</div>
+          </div>
+        </div>
+
+        <!-- Items Table -->
+        <table style="width: 100%; border-collapse: collapse; margin: 20px 0;">
+          <thead>
+            <tr class="document-header">
+              <th style="padding: 12px; text-align: left; color: white;">Description</th>
+              <th style="padding: 12px; text-align: center; color: white;">Qté</th>
+              <th style="padding: 12px; text-align: right; color: white;">P.U. (DZD)</th>
+              <th style="padding: 12px; text-align: right; color: white;">Total (DZD)</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${order.items.map((item, index) => `
+              <tr style="${index % 2 === 1 ? 'background-color: #f9f9f9;' : ''}">
+                <td style="padding: 10px; border-bottom: 1px solid #eee;">${item.description}</td>
+                <td style="padding: 10px; text-align: center; border-bottom: 1px solid #eee;">${item.quantity}</td>
+                <td style="padding: 10px; text-align: right; border-bottom: 1px solid #eee;">${item.unitPrice.toFixed(2)}</td>
+                <td style="padding: 10px; text-align: right; border-bottom: 1px solid #eee;">${item.total.toFixed(2)}</td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+
+        <!-- Totals -->
+        <div class="totals-section" style="margin-top: 30px;">
+          <div style="width: 300px; margin-left: auto; padding: 20px; border-radius: 10px;" class="document-accent">
+            <div style="display: flex; justify-content: space-between; margin: 5px 0; color: white;">
+              <span>Sous-total:</span>
+              <span>${order.subtotal.toFixed(2)} DZD</span>
+            </div>
+            <div style="display: flex; justify-content: space-between; margin: 5px 0; color: white;">
+              <span>TVA (${order.taxRate}%):</span>
+              <span>${order.taxAmount.toFixed(2)} DZD</span>
+            </div>
+            <div style="display: flex; justify-content: space-between; margin: 10px 0; padding: 10px 0; font-size: 18px; font-weight: bold; border-top: 2px solid rgba(255,255,255,0.3); color: white;">
+              <span>TOTAL:</span>
+              <span>${order.total.toFixed(2)} DZD</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Notes and Terms -->
+        ${order.notes || order.terms ? `
+          <div class="notes-section" style="margin-top: 30px;">
+            ${order.notes ? `
+              <div style="margin: 20px 0;">
+                <h4 class="document-primary">Notes:</h4>
+                <p>${order.notes.replace(/<[^>]*>/g, '')}</p>
+              </div>
+            ` : ''}
+            ${order.terms ? `
+              <div style="margin: 20px 0;">
+                <h4 class="document-primary">Conditions de livraison:</h4>
+                <p>${order.terms.replace(/<[^>]*>/g, '')}</p>
+              </div>
+            ` : ''}
+          </div>
+        ` : ''}
+      </div>
+    `
+  }
+
+  static generateDeliveryHTML(delivery, options = {}) {
+    const template = options.template || 'classic'
+    const logo = options.logo
+    
+    return `
+      <div class="delivery-document template-${template}">
+        <!-- Header -->
+        <div class="delivery-header document-header">
+          <div style="display: flex; justify-content: space-between; align-items: center; padding: 20px;">
+            <div style="display: flex; align-items: center;">
+              ${logo ? `<img src="${logo}" alt="Logo" style="width: 60px; height: 60px; object-fit: contain; margin-right: 20px; background: white; padding: 5px; border-radius: 5px;" />` : ''}
+              <div>
+                <div class="delivery-title" style="font-size: 24px; font-weight: bold; color: white;">BON DE LIVRAISON</div>
+                <div style="color: white; opacity: 0.9;">N° ${delivery.number}</div>
+              </div>
+            </div>
+            <div style="text-align: right; color: white; opacity: 0.9;">
+              <div>Date: ${delivery.date}</div>
+              <div>Livraison: ${delivery.deliveryDate}</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Sender and Recipient Info -->
+        <div style="display: flex; justify-content: space-between; margin: 30px 0; gap: 20px;">
+          <div class="sender-info" style="flex: 1;">
+            <div class="document-accent" style="padding: 10px; margin-bottom: 10px; border-radius: 5px;">
+              <h3 style="margin: 0; color: white;">Expéditeur:</h3>
+            </div>
+            <div><strong>${delivery.sender.name || "Nom de l'expéditeur"}</strong></div>
+            <div>${delivery.sender.address || ''}</div>
+            <div>${delivery.sender.city || ''} ${delivery.sender.postalCode || ''}</div>
+            <div>${delivery.sender.phone || ''}</div>
+            <div>${delivery.sender.email || ''}</div>
+          </div>
+          <div class="recipient-info" style="flex: 1;">
+            <div class="document-accent" style="padding: 10px; margin-bottom: 10px; border-radius: 5px;">
+              <h3 style="margin: 0; color: white;">Destinataire:</h3>
+            </div>
+            <div><strong>${delivery.recipient.name || 'Nom du destinataire'}</strong></div>
+            <div>${delivery.recipient.address || ''}</div>
+            <div>${delivery.recipient.city || ''} ${delivery.recipient.postalCode || ''}</div>
+            <div>${delivery.recipient.phone || ''}</div>
+            <div>${delivery.recipient.email || ''}</div>
+          </div>
+        </div>
+
+        <!-- Items Table -->
+        <table style="width: 100%; border-collapse: collapse; margin: 20px 0;">
+          <thead>
+            <tr class="document-header">
+              <th style="padding: 12px; text-align: left; color: white;">Référence</th>
+              <th style="padding: 12px; text-align: left; color: white;">Description</th>
+              <th style="padding: 12px; text-align: center; color: white;">Qté</th>
+              <th style="padding: 12px; text-align: center; color: white;">Unité</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${delivery.items.map((item, index) => `
+              <tr style="${index % 2 === 1 ? 'background-color: #f9f9f9;' : ''}">
+                <td style="padding: 10px; border-bottom: 1px solid #eee;">${item.reference || ''}</td>
+                <td style="padding: 10px; border-bottom: 1px solid #eee;">${item.description}</td>
+                <td style="padding: 10px; text-align: center; border-bottom: 1px solid #eee;">${item.quantity}</td>
+                <td style="padding: 10px; text-align: center; border-bottom: 1px solid #eee;">${item.unit}</td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+
+        <!-- Notes and Terms -->
+        ${delivery.notes || delivery.terms ? `
+          <div class="notes-section" style="margin-top: 30px;">
+            ${delivery.notes ? `
+              <div style="margin: 20px 0;">
+                <h4 class="document-primary">Notes:</h4>
+                <p>${delivery.notes.replace(/<[^>]*>/g, '')}</p>
+              </div>
+            ` : ''}
+            ${delivery.terms ? `
+              <div style="margin: 20px 0;">
+                <h4 class="document-primary">Conditions de livraison:</h4>
+                <p>${delivery.terms.replace(/<[^>]*>/g, '')}</p>
+              </div>
+            ` : ''}
+          </div>
+        ` : ''}
+
+        <!-- Signature Section -->
+        <div style="margin-top: 50px; display: flex; justify-content: space-between;">
+          <div style="text-align: center; width: 200px;">
+            <div style="border-bottom: 1px solid #ccc; height: 60px; margin-bottom: 10px;"></div>
+            <div style="font-size: 12px; color: #666;">Signature de l'expéditeur</div>
+          </div>
+          <div style="text-align: center; width: 200px;">
+            <div style="border-bottom: 1px solid #ccc; height: 60px; margin-bottom: 10px;"></div>
+            <div style="font-size: 12px; color: #666;">Signature du destinataire</div>
+          </div>
+        </div>
+      </div>
+    `
   }
 }

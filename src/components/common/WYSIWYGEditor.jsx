@@ -64,7 +64,7 @@ const WYSIWYGEditor = ({
   return (
     <div className="wysiwyg-editor-container">
       <Editor
-        apiKey="no-api-key"
+        apiKey="s7lvizn9waqfyn4fabavdbftotdss1ih9bmu1a4lt18e9033"
         onInit={(evt, editor) => editorRef.current = editor}
         value={value}
         onEditorChange={handleEditorChange}

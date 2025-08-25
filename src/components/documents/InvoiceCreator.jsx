@@ -9,16 +9,24 @@ import {
   Calendar,
   Building,
   User,
-  Printer
+  Printer,
+  Upload,
+  Image,
+  Palette
 } from 'lucide-react'
 import { format } from 'date-fns'
 import { fr, ar } from 'date-fns/locale'
 import { PDFGenerator } from '../../utils/pdfGenerator'
 import { PrintManager } from '../../utils/printManager'
 import { AlgerianFormatting, AlgerianValidation, AlgerianDefaults } from '../../utils/algerianTemplates'
-// import { InvoiceNotesEditor, TermsEditor } from '../common/WYSIWYGEditor'
+import { documentTemplates, LogoManager, SettingsManager, TemplateUtils } from '../../utils/templateSystem'
+import WYSIWYGEditor from '../common/WYSIWYGEditor'
 
 const InvoiceCreator = ({ currentLang, languages }) => {
+  const [selectedTemplate, setSelectedTemplate] = useState('classic')
+  const [showTemplateSelector, setShowTemplateSelector] = useState(false)
+  const [logo, setLogo] = useState(null)
+  
   const [invoice, setInvoice] = useState({
     number: AlgerianFormatting.generateDocumentNumber('FAC'),
     date: format(new Date(), 'yyyy-MM-dd'),
@@ -68,6 +76,24 @@ const InvoiceCreator = ({ currentLang, languages }) => {
     terms: AlgerianDefaults.invoice.terms,
     currency: 'DZD'
   })
+
+  // Load settings and logo
+  useEffect(() => {
+    const settings = SettingsManager.getSettings()
+    const logoData = LogoManager.getLogo()
+    
+    if (logoData) {
+      setLogo(logoData)
+    }
+    
+    setSelectedTemplate(settings.defaultTemplate)
+    setInvoice(prev => ({
+      ...prev,
+      company: { ...prev.company, ...settings.companyInfo },
+      taxRate: settings.documentSettings.taxRate,
+      terms: settings.documentSettings.terms
+    }))
+  }, [])
 
   // Calculate totals
   useEffect(() => {
@@ -157,6 +183,18 @@ const InvoiceCreator = ({ currentLang, languages }) => {
     }))
   }
 
+  const handleLogoUpload = async (event) => {
+    const file = event.target.files[0]
+    if (file) {
+      try {
+        const logoData = await LogoManager.uploadLogo(file)
+        setLogo(logoData)
+      } catch (error) {
+        alert(`Erreur lors du téléchargement du logo: ${error.message}`)
+      }
+    }
+  }
+
   const saveInvoice = () => {
     // Save to localStorage for now
     const savedInvoices = JSON.parse(localStorage.getItem('invoices') || '[]')
@@ -164,7 +202,8 @@ const InvoiceCreator = ({ currentLang, languages }) => {
       ...invoice,
       id: Date.now(),
       createdAt: new Date().toISOString(),
-      type: 'invoice'
+      type: 'invoice',
+      template: selectedTemplate
     }
     savedInvoices.push(invoiceToSave)
     localStorage.setItem('invoices', JSON.stringify(savedInvoices))
@@ -173,7 +212,10 @@ const InvoiceCreator = ({ currentLang, languages }) => {
 
   const exportToPDF = async () => {
     try {
-      const pdf = await PDFGenerator.generateInvoicePDF(invoice)
+      const pdf = await PDFGenerator.generateInvoicePDF(invoice, {
+        template: selectedTemplate,
+        logo: logo?.logoData
+      })
       const filename = `facture-${invoice.number}-${invoice.date}.pdf`
       PDFGenerator.downloadPDF(pdf, filename)
     } catch (error) {
@@ -184,7 +226,10 @@ const InvoiceCreator = ({ currentLang, languages }) => {
 
   const previewPDF = async () => {
     try {
-      const pdf = await PDFGenerator.generateInvoicePDF(invoice)
+      const pdf = await PDFGenerator.generateInvoicePDF(invoice, {
+        template: selectedTemplate,
+        logo: logo?.logoData
+      })
       PDFGenerator.previewPDF(pdf)
     } catch (error) {
       console.error('Error previewing PDF:', error)
@@ -194,7 +239,10 @@ const InvoiceCreator = ({ currentLang, languages }) => {
 
   const printInvoice = () => {
     try {
-      PrintManager.printInvoice(invoice)
+      PrintManager.printInvoice(invoice, {
+        template: selectedTemplate,
+        logo: logo?.logoData
+      })
     } catch (error) {
       console.error('Error printing invoice:', error)
       alert('Erreur lors de l\'impression. Veuillez réessayer.')
@@ -218,6 +266,13 @@ const InvoiceCreator = ({ currentLang, languages }) => {
             </div>
             
             <div className="flex space-x-3">
+              <button
+                onClick={() => setShowTemplateSelector(!showTemplateSelector)}
+                className="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50"
+              >
+                <Palette className="w-4 h-4 mr-2" />
+                Thème
+              </button>
               <button
                 onClick={previewPDF}
                 className="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50"
@@ -248,11 +303,73 @@ const InvoiceCreator = ({ currentLang, languages }) => {
               </button>
             </div>
           </div>
+
+          {/* Template Selector */}
+          {showTemplateSelector && (
+            <div className="mt-6 p-4 bg-gray-50 rounded-lg">
+              <h3 className="text-lg font-medium text-gray-900 mb-4">Choisir un thème</h3>
+              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+                {TemplateUtils.getTemplateList().map(template => (
+                  <button
+                    key={template.id}
+                    onClick={() => setSelectedTemplate(template.id)}
+                    className={`p-4 rounded-lg border-2 transition-all ${
+                      selectedTemplate === template.id
+                        ? 'border-blue-500 bg-blue-50'
+                        : 'border-gray-200 bg-white hover:border-gray-300'
+                    }`}
+                  >
+                    <div 
+                      className="w-full h-12 rounded mb-2"
+                      style={{ background: template.gradients.header }}
+                    ></div>
+                    <p className="text-sm font-medium text-gray-900">{template.name}</p>
+                    <p className="text-xs text-gray-500">{template.description}</p>
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* Form Section */}
           <div className="space-y-6">
+            {/* Company Logo */}
+            <div className="bg-white rounded-lg shadow-sm border p-6">
+              <h3 className="text-lg font-medium text-gray-900 mb-4">Logo de l'entreprise</h3>
+              <div className="flex items-center space-x-4">
+                {logo ? (
+                  <div className="flex items-center space-x-4">
+                    <img src={logo.logoData} alt="Logo" className="w-16 h-16 object-contain border rounded" />
+                    <div>
+                      <p className="text-sm font-medium text-gray-900">{logo.logoInfo.name}</p>
+                      <p className="text-xs text-gray-500">{(logo.logoInfo.size / 1024).toFixed(1)} KB</p>
+                    </div>
+                    <button
+                      onClick={() => { LogoManager.removeLogo(); setLogo(null) }}
+                      className="text-red-600 hover:text-red-700"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
+                ) : (
+                  <label className="flex items-center space-x-2 cursor-pointer">
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={handleLogoUpload}
+                      className="hidden"
+                    />
+                    <div className="w-16 h-16 border-2 border-dashed border-gray-300 rounded-lg flex items-center justify-center hover:border-gray-400">
+                      <Upload className="w-6 h-6 text-gray-400" />
+                    </div>
+                    <span className="text-sm text-gray-600">Télécharger un logo</span>
+                  </label>
+                )}
+              </div>
+            </div>
+
             {/* Invoice Details */}
             <div className="bg-white rounded-lg shadow-sm border p-6">
               <h2 className="text-lg font-semibold text-gray-900 mb-4">Détails de la facture</h2>
@@ -548,27 +665,29 @@ const InvoiceCreator = ({ currentLang, languages }) => {
               <h2 className="text-lg font-semibold text-gray-900 mb-4">Notes et conditions</h2>
               <div className="space-y-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
                     Notes
                   </label>
-                  <textarea
+                  <WYSIWYGEditor
                     value={invoice.notes}
-                    onChange={(e) => updateInvoiceField('notes', e.target.value)}
-                    rows={3}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    onChange={(value) => updateInvoiceField('notes', value)}
+                    height={120}
                     placeholder="Ajoutez des notes à la facture..."
+                    language={currentLang}
+                    toolbar="simple"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
                     Conditions de paiement
                   </label>
-                  <textarea
+                  <WYSIWYGEditor
                     value={invoice.terms}
-                    onChange={(e) => updateInvoiceField('terms', e.target.value)}
-                    rows={3}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    onChange={(value) => updateInvoiceField('terms', value)}
+                    height={120}
                     placeholder="Conditions de paiement..."
+                    language={currentLang}
+                    toolbar="simple"
                   />
                 </div>
               </div>
@@ -586,17 +705,32 @@ const InvoiceCreator = ({ currentLang, languages }) => {
               </div>
               
               {/* Invoice Preview */}
-              <div className="border-2 border-gray-200 rounded-lg p-6 bg-white" style={{ minHeight: '800px' }}>
+              <div 
+                className={`border-2 rounded-lg p-6 template-${selectedTemplate}`}
+                style={{ 
+                  minHeight: '800px',
+                  background: documentTemplates[selectedTemplate].colors.background,
+                  borderColor: documentTemplates[selectedTemplate].colors.border
+                }}
+              >
                 {/* Header */}
-                <div className="border-b pb-4 mb-6">
-                  <div className="flex justify-between">
-                    <div>
-                      <h1 className="text-2xl font-bold text-gray-900">FACTURE</h1>
-                      <p className="text-gray-600">N° {invoice.number}</p>
+                <div 
+                  className="p-4 rounded mb-6 text-white"
+                  style={{ background: documentTemplates[selectedTemplate].gradients.header }}
+                >
+                  <div className="flex justify-between items-center">
+                    <div className="flex items-center">
+                      {logo && (
+                        <img src={logo.logoData} alt="Logo" className="w-12 h-12 object-contain mr-4 bg-white p-1 rounded" />
+                      )}
+                      <div>
+                        <h1 className="text-2xl font-bold">FACTURE</h1>
+                        <p className="opacity-90">N° {invoice.number}</p>
+                      </div>
                     </div>
-                    <div className="text-right">
-                      <p className="text-sm text-gray-600">Date: {invoice.date}</p>
-                      <p className="text-sm text-gray-600">Échéance: {invoice.dueDate}</p>
+                    <div className="text-right opacity-90">
+                      <p className="text-sm">Date: {invoice.date}</p>
+                      <p className="text-sm">Échéance: {invoice.dueDate}</p>
                     </div>
                   </div>
                 </div>
@@ -630,11 +764,14 @@ const InvoiceCreator = ({ currentLang, languages }) => {
                 <div className="mb-8">
                   <table className="w-full text-sm">
                     <thead>
-                      <tr className="border-b-2 border-gray-300">
-                        <th className="text-left py-2">Description</th>
-                        <th className="text-center py-2">Qté</th>
-                        <th className="text-right py-2">P.U. (DZD)</th>
-                        <th className="text-right py-2">Total (DZD)</th>
+                      <tr 
+                        className="text-white"
+                        style={{ background: documentTemplates[selectedTemplate].colors.accent }}
+                      >
+                        <th className="text-left py-3 px-2">Description</th>
+                        <th className="text-center py-3 px-2">Qté</th>
+                        <th className="text-right py-3 px-2">P.U. (DZD)</th>
+                        <th className="text-right py-3 px-2">Total (DZD)</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -652,7 +789,10 @@ const InvoiceCreator = ({ currentLang, languages }) => {
 
                 {/* Totals */}
                 <div className="flex justify-end mb-8">
-                  <div className="w-64">
+                  <div 
+                    className="w-64 p-4 rounded text-white"
+                    style={{ background: documentTemplates[selectedTemplate].colors.accent }}
+                  >
                     <div className="flex justify-between py-1">
                       <span>Sous-total:</span>
                       <span>{AlgerianFormatting.formatCurrency(invoice.subtotal)}</span>
@@ -661,7 +801,7 @@ const InvoiceCreator = ({ currentLang, languages }) => {
                       <span>TVA ({invoice.taxRate}%):</span>
                       <span>{AlgerianFormatting.formatCurrency(invoice.taxAmount)}</span>
                     </div>
-                    <div className="flex justify-between py-2 border-t-2 font-bold text-lg">
+                    <div className="flex justify-between py-2 border-t-2 border-white border-opacity-30 font-bold text-lg">
                       <span>Total:</span>
                       <span>{AlgerianFormatting.formatCurrency(invoice.total)}</span>
                     </div>

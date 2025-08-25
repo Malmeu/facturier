@@ -1,5 +1,6 @@
 import jsPDF from 'jspdf'
 import html2canvas from 'html2canvas'
+import { documentTemplates, TemplateUtils } from './templateSystem'
 
 // PDF generation utilities for billing documents
 export class PDFGenerator {
@@ -336,5 +337,552 @@ export class PDFGenerator {
       console.error('Error previewing PDF:', error)
       throw new Error('Failed to preview PDF')
     }
+  }
+
+  // Generate Order PDF
+  static async generateOrderPDF(order, options = {}) {
+    try {
+      const pdf = new jsPDF('p', 'mm', 'a4')
+      const pageWidth = pdf.internal.pageSize.getWidth()
+      const pageHeight = pdf.internal.pageSize.getHeight()
+      const template = options.template ? documentTemplates[options.template] : documentTemplates.classic
+      
+      // Set fonts and colors
+      pdf.setFont('helvetica', 'normal')
+      
+      // Header with template colors
+      this.addOrderHeader(pdf, order, pageWidth, template, options.logo)
+      
+      // Company and Supplier Info
+      let yPosition = this.addOrderCompanyInfo(pdf, order, pageWidth, template)
+      
+      // Items table
+      yPosition = this.addOrderItemsTable(pdf, order, yPosition, pageWidth, template)
+      
+      // Totals
+      yPosition = this.addOrderTotals(pdf, order, yPosition, pageWidth, template)
+      
+      // Notes and Terms
+      this.addOrderNotesAndTerms(pdf, order, yPosition, pageWidth, pageHeight, template)
+      
+      // Footer
+      this.addFooter(pdf, pageWidth, pageHeight)
+      
+      return pdf
+    } catch (error) {
+      console.error('Error generating Order PDF:', error)
+      throw new Error('Failed to generate Order PDF')
+    }
+  }
+
+  // Generate Delivery PDF
+  static async generateDeliveryPDF(delivery, options = {}) {
+    try {
+      const pdf = new jsPDF('p', 'mm', 'a4')
+      const pageWidth = pdf.internal.pageSize.getWidth()
+      const pageHeight = pdf.internal.pageSize.getHeight()
+      const template = options.template ? documentTemplates[options.template] : documentTemplates.classic
+      
+      // Set fonts and colors
+      pdf.setFont('helvetica', 'normal')
+      
+      // Header with template colors
+      this.addDeliveryHeader(pdf, delivery, pageWidth, template, options.logo)
+      
+      // Sender and Recipient Info
+      let yPosition = this.addDeliveryPartyInfo(pdf, delivery, pageWidth, template)
+      
+      // Items table
+      yPosition = this.addDeliveryItemsTable(pdf, delivery, yPosition, pageWidth, template)
+      
+      // Transport info and notes
+      this.addDeliveryNotesAndTerms(pdf, delivery, yPosition, pageWidth, pageHeight, template)
+      
+      // Footer
+      this.addFooter(pdf, pageWidth, pageHeight)
+      
+      return pdf
+    } catch (error) {
+      console.error('Error generating Delivery PDF:', error)
+      throw new Error('Failed to generate Delivery PDF')
+    }
+  }
+
+  // Order-specific methods
+  static addOrderHeader(pdf, order, pageWidth, template, logo) {
+    // Background color from template
+    const headerColor = this.hexToRgb(template.colors.primary)
+    pdf.setFillColor(headerColor.r, headerColor.g, headerColor.b)
+    pdf.roundedRect(15, 15, pageWidth - 30, 25, 3, 3, 'F')
+    
+    // Logo if provided
+    if (logo) {
+      // Note: Logo would need to be processed for PDF inclusion
+      pdf.setFillColor(255, 255, 255)
+      pdf.roundedRect(20, 18, 12, 12, 2, 2, 'F')
+      pdf.setTextColor(headerColor.r, headerColor.g, headerColor.b)
+      pdf.setFontSize(8)
+      pdf.text('LOGO', 24, 25.5)
+    } else {
+      pdf.setFillColor(255, 255, 255)
+      pdf.roundedRect(20, 18, 12, 12, 2, 2, 'F')
+      pdf.setTextColor(headerColor.r, headerColor.g, headerColor.b)
+      pdf.setFontSize(8)
+      pdf.text('BC', 24, 25.5)
+    }
+    
+    // Title
+    pdf.setTextColor(255, 255, 255)
+    pdf.setFontSize(20)
+    pdf.setFont('helvetica', 'bold')
+    pdf.text('BON DE COMMANDE', 40, 30)
+    
+    // Order info
+    pdf.setFontSize(10)
+    pdf.setFont('helvetica', 'normal')
+    pdf.text(`N° ${order.number}`, pageWidth - 60, 24)
+    pdf.text(`Date: ${order.date}`, pageWidth - 60, 30)
+    pdf.text(`Livraison: ${order.dueDate}`, pageWidth - 60, 36)
+  }
+
+  static addOrderCompanyInfo(pdf, order, pageWidth, template) {
+    const startY = 50
+    const accentColor = this.hexToRgb(template.colors.accent)
+    
+    // Company Info (Left)
+    pdf.setFillColor(accentColor.r, accentColor.g, accentColor.b)
+    pdf.roundedRect(15, startY, (pageWidth - 35) / 2, 5, 1, 1, 'F')
+    pdf.setTextColor(255, 255, 255)
+    pdf.setFontSize(10)
+    pdf.setFont('helvetica', 'bold')
+    pdf.text('ACHETEUR', 18, startY + 3.5)
+    
+    pdf.setTextColor(0, 0, 0)
+    pdf.setFont('helvetica', 'normal')
+    let yPos = startY + 12
+    
+    if (order.company.name) {
+      pdf.setFont('helvetica', 'bold')
+      pdf.text(order.company.name, 15, yPos)
+      yPos += 6
+      pdf.setFont('helvetica', 'normal')
+    }
+    
+    if (order.company.address) {
+      pdf.text(order.company.address, 15, yPos)
+      yPos += 6
+    }
+    
+    if (order.company.city || order.company.postalCode) {
+      pdf.text(`${order.company.city} ${order.company.postalCode}`, 15, yPos)
+      yPos += 6
+    }
+    
+    if (order.company.phone) {
+      pdf.text(`Tél: ${order.company.phone}`, 15, yPos)
+      yPos += 6
+    }
+    
+    if (order.company.email) {
+      pdf.text(`Email: ${order.company.email}`, 15, yPos)
+    }
+    
+    // Supplier Info (Right)
+    const rightX = pageWidth / 2 + 10
+    pdf.setFillColor(accentColor.r, accentColor.g, accentColor.b)
+    pdf.roundedRect(rightX, startY, (pageWidth - 35) / 2, 5, 1, 1, 'F')
+    pdf.setTextColor(255, 255, 255)
+    pdf.setFont('helvetica', 'bold')
+    pdf.text('FOURNISSEUR', rightX + 3, startY + 3.5)
+    
+    pdf.setTextColor(0, 0, 0)
+    pdf.setFont('helvetica', 'normal')
+    yPos = startY + 12
+    
+    if (order.supplier.name) {
+      pdf.setFont('helvetica', 'bold')
+      pdf.text(order.supplier.name, rightX, yPos)
+      yPos += 6
+      pdf.setFont('helvetica', 'normal')
+    }
+    
+    if (order.supplier.address) {
+      pdf.text(order.supplier.address, rightX, yPos)
+      yPos += 6
+    }
+    
+    if (order.supplier.city || order.supplier.postalCode) {
+      pdf.text(`${order.supplier.city} ${order.supplier.postalCode}`, rightX, yPos)
+      yPos += 6
+    }
+    
+    if (order.supplier.phone) {
+      pdf.text(`Tél: ${order.supplier.phone}`, rightX, yPos)
+      yPos += 6
+    }
+    
+    if (order.supplier.email) {
+      pdf.text(`Email: ${order.supplier.email}`, rightX, yPos)
+    }
+    
+    return Math.max(yPos, startY + 50) + 10
+  }
+
+  static addOrderItemsTable(pdf, order, startY, pageWidth, template) {
+    const tableStartY = startY
+    const headerColor = this.hexToRgb(template.colors.primary)
+    
+    // Table header
+    pdf.setFillColor(headerColor.r, headerColor.g, headerColor.b)
+    pdf.rect(15, tableStartY, pageWidth - 30, 8, 'F')
+    
+    pdf.setTextColor(255, 255, 255)
+    pdf.setFontSize(10)
+    pdf.setFont('helvetica', 'bold')
+    pdf.text('Description', 18, tableStartY + 5.5)
+    pdf.text('Qté', 120, tableStartY + 5.5)
+    pdf.text('P.U. (DZD)', 140, tableStartY + 5.5)
+    pdf.text('Total (DZD)', 170, tableStartY + 5.5)
+    
+    // Table rows
+    pdf.setTextColor(0, 0, 0)
+    pdf.setFont('helvetica', 'normal')
+    let currentY = tableStartY + 8
+    
+    order.items.forEach((item, index) => {
+      const rowHeight = 8
+      
+      // Alternating row colors
+      if (index % 2 === 1) {
+        pdf.setFillColor(250, 250, 250)
+        pdf.rect(15, currentY, pageWidth - 30, rowHeight, 'F')
+      }
+      
+      pdf.setTextColor(0, 0, 0)
+      pdf.text(item.description || '', 18, currentY + 5.5)
+      pdf.text(item.quantity.toString(), 125, currentY + 5.5)
+      pdf.text(item.unitPrice.toFixed(2), 145, currentY + 5.5)
+      pdf.text(item.total.toFixed(2), 175, currentY + 5.5)
+      
+      currentY += rowHeight
+    })
+    
+    // Table border
+    const borderColor = this.hexToRgb(template.colors.border)
+    pdf.setDrawColor(borderColor.r, borderColor.g, borderColor.b)
+    pdf.rect(15, tableStartY, pageWidth - 30, currentY - tableStartY)
+    
+    return currentY + 10
+  }
+
+  static addOrderTotals(pdf, order, startY, pageWidth, template) {
+    const rightX = pageWidth - 80
+    let currentY = startY
+    const accentColor = this.hexToRgb(template.colors.accent)
+    
+    pdf.setFontSize(10)
+    pdf.setFont('helvetica', 'normal')
+    
+    // Subtotal
+    pdf.text('Sous-total:', rightX, currentY)
+    pdf.text(`${order.subtotal.toFixed(2)} DZD`, rightX + 35, currentY)
+    currentY += 6
+    
+    // Tax
+    pdf.text(`TVA (${order.taxRate}%):`, rightX, currentY)
+    pdf.text(`${order.taxAmount.toFixed(2)} DZD`, rightX + 35, currentY)
+    currentY += 6
+    
+    // Total background
+    pdf.setFillColor(accentColor.r, accentColor.g, accentColor.b)
+    pdf.roundedRect(rightX - 5, currentY - 2, 70, 10, 2, 2, 'F')
+    
+    // Total
+    pdf.setTextColor(255, 255, 255)
+    pdf.setFont('helvetica', 'bold')
+    pdf.setFontSize(12)
+    pdf.text('TOTAL:', rightX, currentY + 4)
+    pdf.text(`${order.total.toFixed(2)} DZD`, rightX + 35, currentY + 4)
+    
+    return currentY + 15
+  }
+
+  static addOrderNotesAndTerms(pdf, order, startY, pageWidth, pageHeight, template) {
+    let currentY = startY
+    
+    if (currentY > pageHeight - 60) {
+      pdf.addPage()
+      currentY = 20
+    }
+    
+    pdf.setTextColor(0, 0, 0)
+    pdf.setFontSize(10)
+    pdf.setFont('helvetica', 'normal')
+    
+    if (order.notes) {
+      pdf.setFont('helvetica', 'bold')
+      pdf.text('Notes:', 15, currentY)
+      currentY += 6
+      
+      pdf.setFont('helvetica', 'normal')
+      const notesLines = pdf.splitTextToSize(order.notes.replace(/<[^>]*>/g, ''), pageWidth - 30)
+      pdf.text(notesLines, 15, currentY)
+      currentY += notesLines.length * 5 + 8
+    }
+    
+    if (order.terms) {
+      pdf.setFont('helvetica', 'bold')
+      pdf.text('Conditions de livraison:', 15, currentY)
+      currentY += 6
+      
+      pdf.setFont('helvetica', 'normal')
+      const termsLines = pdf.splitTextToSize(order.terms.replace(/<[^>]*>/g, ''), pageWidth - 30)
+      pdf.text(termsLines, 15, currentY)
+    }
+  }
+
+  // Delivery-specific methods
+  static addDeliveryHeader(pdf, delivery, pageWidth, template, logo) {
+    const headerColor = this.hexToRgb(template.colors.primary)
+    pdf.setFillColor(headerColor.r, headerColor.g, headerColor.b)
+    pdf.roundedRect(15, 15, pageWidth - 30, 25, 3, 3, 'F')
+    
+    // Logo if provided
+    if (logo) {
+      pdf.setFillColor(255, 255, 255)
+      pdf.roundedRect(20, 18, 12, 12, 2, 2, 'F')
+      pdf.setTextColor(headerColor.r, headerColor.g, headerColor.b)
+      pdf.setFontSize(8)
+      pdf.text('LOGO', 24, 25.5)
+    } else {
+      pdf.setFillColor(255, 255, 255)
+      pdf.roundedRect(20, 18, 12, 12, 2, 2, 'F')
+      pdf.setTextColor(headerColor.r, headerColor.g, headerColor.b)
+      pdf.setFontSize(8)
+      pdf.text('BL', 24, 25.5)
+    }
+    
+    // Title
+    pdf.setTextColor(255, 255, 255)
+    pdf.setFontSize(20)
+    pdf.setFont('helvetica', 'bold')
+    pdf.text('BON DE LIVRAISON', 40, 30)
+    
+    // Delivery info
+    pdf.setFontSize(10)
+    pdf.setFont('helvetica', 'normal')
+    pdf.text(`N° ${delivery.number}`, pageWidth - 60, 24)
+    pdf.text(`Date: ${delivery.date}`, pageWidth - 60, 30)
+    pdf.text(`Livraison: ${delivery.deliveryDate}`, pageWidth - 60, 36)
+  }
+
+  static addDeliveryPartyInfo(pdf, delivery, pageWidth, template) {
+    const startY = 50
+    const accentColor = this.hexToRgb(template.colors.accent)
+    
+    // Sender Info (Left)
+    pdf.setFillColor(accentColor.r, accentColor.g, accentColor.b)
+    pdf.roundedRect(15, startY, (pageWidth - 35) / 2, 5, 1, 1, 'F')
+    pdf.setTextColor(255, 255, 255)
+    pdf.setFontSize(10)
+    pdf.setFont('helvetica', 'bold')
+    pdf.text('EXPÉDITEUR', 18, startY + 3.5)
+    
+    pdf.setTextColor(0, 0, 0)
+    pdf.setFont('helvetica', 'normal')
+    let yPos = startY + 12
+    
+    if (delivery.sender.name) {
+      pdf.setFont('helvetica', 'bold')
+      pdf.text(delivery.sender.name, 15, yPos)
+      yPos += 6
+      pdf.setFont('helvetica', 'normal')
+    }
+    
+    if (delivery.sender.address) {
+      pdf.text(delivery.sender.address, 15, yPos)
+      yPos += 6
+    }
+    
+    if (delivery.sender.city || delivery.sender.postalCode) {
+      pdf.text(`${delivery.sender.city} ${delivery.sender.postalCode}`, 15, yPos)
+      yPos += 6
+    }
+    
+    if (delivery.sender.phone) {
+      pdf.text(`Tél: ${delivery.sender.phone}`, 15, yPos)
+      yPos += 6
+    }
+    
+    if (delivery.sender.email) {
+      pdf.text(`Email: ${delivery.sender.email}`, 15, yPos)
+    }
+    
+    // Recipient Info (Right)
+    const rightX = pageWidth / 2 + 10
+    pdf.setFillColor(accentColor.r, accentColor.g, accentColor.b)
+    pdf.roundedRect(rightX, startY, (pageWidth - 35) / 2, 5, 1, 1, 'F')
+    pdf.setTextColor(255, 255, 255)
+    pdf.setFont('helvetica', 'bold')
+    pdf.text('DESTINATAIRE', rightX + 3, startY + 3.5)
+    
+    pdf.setTextColor(0, 0, 0)
+    pdf.setFont('helvetica', 'normal')
+    yPos = startY + 12
+    
+    if (delivery.recipient.name) {
+      pdf.setFont('helvetica', 'bold')
+      pdf.text(delivery.recipient.name, rightX, yPos)
+      yPos += 6
+      pdf.setFont('helvetica', 'normal')
+    }
+    
+    if (delivery.recipient.address) {
+      pdf.text(delivery.recipient.address, rightX, yPos)
+      yPos += 6
+    }
+    
+    if (delivery.recipient.city || delivery.recipient.postalCode) {
+      pdf.text(`${delivery.recipient.city} ${delivery.recipient.postalCode}`, rightX, yPos)
+      yPos += 6
+    }
+    
+    if (delivery.recipient.phone) {
+      pdf.text(`Tél: ${delivery.recipient.phone}`, rightX, yPos)
+      yPos += 6
+    }
+    
+    if (delivery.recipient.email) {
+      pdf.text(`Email: ${delivery.recipient.email}`, rightX, yPos)
+    }
+    
+    return Math.max(yPos, startY + 50) + 10
+  }
+
+  static addDeliveryItemsTable(pdf, delivery, startY, pageWidth, template) {
+    const tableStartY = startY
+    const headerColor = this.hexToRgb(template.colors.primary)
+    
+    // Table header
+    pdf.setFillColor(headerColor.r, headerColor.g, headerColor.b)
+    pdf.rect(15, tableStartY, pageWidth - 30, 8, 'F')
+    
+    pdf.setTextColor(255, 255, 255)
+    pdf.setFontSize(10)
+    pdf.setFont('helvetica', 'bold')
+    pdf.text('Référence', 18, tableStartY + 5.5)
+    pdf.text('Description', 70, tableStartY + 5.5)
+    pdf.text('Qté', 140, tableStartY + 5.5)
+    pdf.text('Unité', 160, tableStartY + 5.5)
+    
+    // Table rows
+    pdf.setTextColor(0, 0, 0)
+    pdf.setFont('helvetica', 'normal')
+    let currentY = tableStartY + 8
+    
+    delivery.items.forEach((item, index) => {
+      const rowHeight = 8
+      
+      // Alternating row colors
+      if (index % 2 === 1) {
+        pdf.setFillColor(250, 250, 250)
+        pdf.rect(15, currentY, pageWidth - 30, rowHeight, 'F')
+      }
+      
+      pdf.setTextColor(0, 0, 0)
+      pdf.text(item.reference || '', 18, currentY + 5.5)
+      pdf.text(item.description || '', 70, currentY + 5.5)
+      pdf.text(item.quantity.toString(), 145, currentY + 5.5)
+      pdf.text(item.unit || '', 165, currentY + 5.5)
+      
+      currentY += rowHeight
+    })
+    
+    // Table border
+    const borderColor = this.hexToRgb(template.colors.border)
+    pdf.setDrawColor(borderColor.r, borderColor.g, borderColor.b)
+    pdf.rect(15, tableStartY, pageWidth - 30, currentY - tableStartY)
+    
+    return currentY + 10
+  }
+
+  static addDeliveryNotesAndTerms(pdf, delivery, startY, pageWidth, pageHeight, template) {
+    let currentY = startY
+    
+    if (currentY > pageHeight - 80) {
+      pdf.addPage()
+      currentY = 20
+    }
+    
+    // Transport info
+    if (delivery.transportInfo.carrier || delivery.transportInfo.trackingNumber) {
+      const accentColor = this.hexToRgb(template.colors.accent)
+      pdf.setFillColor(accentColor.r, accentColor.g, accentColor.b)
+      pdf.roundedRect(15, currentY, pageWidth - 30, 5, 1, 1, 'F')
+      pdf.setTextColor(255, 255, 255)
+      pdf.setFont('helvetica', 'bold')
+      pdf.text('INFORMATIONS DE TRANSPORT', 18, currentY + 3.5)
+      
+      pdf.setTextColor(0, 0, 0)
+      pdf.setFont('helvetica', 'normal')
+      currentY += 12
+      
+      if (delivery.transportInfo.carrier) {
+        pdf.text(`Transporteur: ${delivery.transportInfo.carrier}`, 15, currentY)
+        currentY += 6
+      }
+      
+      if (delivery.transportInfo.trackingNumber) {
+        pdf.text(`N° de suivi: ${delivery.transportInfo.trackingNumber}`, 15, currentY)
+        currentY += 6
+      }
+      
+      if (delivery.transportInfo.transportMethod) {
+        pdf.text(`Mode: ${delivery.transportInfo.transportMethod}`, 15, currentY)
+        currentY += 6
+      }
+      
+      if (delivery.transportInfo.specialInstructions) {
+        pdf.text(`Instructions: ${delivery.transportInfo.specialInstructions}`, 15, currentY)
+        currentY += 6
+      }
+      
+      currentY += 10
+    }
+    
+    pdf.setTextColor(0, 0, 0)
+    pdf.setFontSize(10)
+    pdf.setFont('helvetica', 'normal')
+    
+    if (delivery.notes) {
+      pdf.setFont('helvetica', 'bold')
+      pdf.text('Notes:', 15, currentY)
+      currentY += 6
+      
+      pdf.setFont('helvetica', 'normal')
+      const notesLines = pdf.splitTextToSize(delivery.notes.replace(/<[^>]*>/g, ''), pageWidth - 30)
+      pdf.text(notesLines, 15, currentY)
+      currentY += notesLines.length * 5 + 8
+    }
+    
+    if (delivery.terms) {
+      pdf.setFont('helvetica', 'bold')
+      pdf.text('Conditions de livraison:', 15, currentY)
+      currentY += 6
+      
+      pdf.setFont('helvetica', 'normal')
+      const termsLines = pdf.splitTextToSize(delivery.terms.replace(/<[^>]*>/g, ''), pageWidth - 30)
+      pdf.text(termsLines, 15, currentY)
+    }
+  }
+
+  // Utility method to convert hex to RGB
+  static hexToRgb(hex) {
+    const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex)
+    return result ? {
+      r: parseInt(result[1], 16),
+      g: parseInt(result[2], 16),
+      b: parseInt(result[3], 16)
+    } : { r: 0, g: 0, b: 0 }
   }
 }

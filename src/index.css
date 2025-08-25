@@ -55,3 +55,108 @@ body {
 .gradient-accent {
   background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
 }
+
+/* Template System CSS */
+.template-classic {
+  --template-primary: #1f2937;
+  --template-secondary: #6b7280;
+  --template-accent: #3b82f6;
+  --template-background: #ffffff;
+  --template-text: #111827;
+  --template-border: #e5e7eb;
+}
+
+.template-modern {
+  --template-primary: #6366f1;
+  --template-secondary: #8b5cf6;
+  --template-accent: #06b6d4;
+  --template-background: #ffffff;
+  --template-text: #111827;
+  --template-border: #e0e7ff;
+}
+
+.template-elegant {
+  --template-primary: #92400e;
+  --template-secondary: #d97706;
+  --template-accent: #f59e0b;
+  --template-background: #ffffff;
+  --template-text: #111827;
+  --template-border: #fef3c7;
+}
+
+.template-fresh {
+  --template-primary: #059669;
+  --template-secondary: #10b981;
+  --template-accent: #34d399;
+  --template-background: #ffffff;
+  --template-text: #111827;
+  --template-border: #d1fae5;
+}
+
+.template-corporate {
+  --template-primary: #1e40af;
+  --template-secondary: #3b82f6;
+  --template-accent: #60a5fa;
+  --template-background: #ffffff;
+  --template-text: #111827;
+  --template-border: #dbeafe;
+}
+
+.template-vibrant {
+  --template-primary: #dc2626;
+  --template-secondary: #f97316;
+  --template-accent: #eab308;
+  --template-background: #ffffff;
+  --template-text: #111827;
+  --template-border: #fed7d7;
+}
+
+/* Template Document Styles */
+.document-header {
+  background: var(--template-primary);
+  color: white;
+}
+
+.document-accent {
+  background: var(--template-accent);
+  color: white;
+}
+
+.document-border {
+  border-color: var(--template-border);
+}
+
+.document-text {
+  color: var(--template-text);
+}
+
+.document-primary {
+  color: var(--template-primary);
+}
+
+.document-secondary {
+  color: var(--template-secondary);
+}
+
+/* Print-specific template styles */
+@media print {
+  .template-classic .document-header,
+  .template-modern .document-header,
+  .template-elegant .document-header,
+  .template-fresh .document-header,
+  .template-corporate .document-header,
+  .template-vibrant .document-header {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+  
+  .template-classic .document-accent,
+  .template-modern .document-accent,
+  .template-elegant .document-accent,
+  .template-fresh .document-accent,
+  .template-corporate .document-accent,
+  .template-vibrant .document-accent {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+}
