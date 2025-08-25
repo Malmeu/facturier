@@ -1,0 +1,9 @@
+/* App.css - Clean styles for the billing application */
+.App {
+  text-align: left;
+}
+
+/* Smooth transitions for all elements */
+* {
+  transition: all 0.2s ease-in-out;
+}
