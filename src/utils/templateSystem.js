@@ -119,9 +119,9 @@ export class LogoManager {
         return
       }
 
-      // Validate file size (max 5MB before compression)
-      if (file.size > 5 * 1024 * 1024) {
-        reject(new Error('File size must be less than 5MB'))
+      // Validate file size (max 10MB before compression)
+      if (file.size > 10 * 1024 * 1024) {
+        reject(new Error('File size must be less than 10MB'))
         return
       }
 
@@ -129,36 +129,9 @@ export class LogoManager {
       const img = new Image()
       img.onload = () => {
         try {
-          const canvas = document.createElement('canvas')
-          const ctx = canvas.getContext('2d')
-          
-          // Calculate new dimensions
-          let { width, height } = this.calculateDimensions(img.width, img.height)
-          
-          canvas.width = width
-          canvas.height = height
-          
-          // Draw and compress image
-          ctx.drawImage(img, 0, 0, width, height)
-          
-          // Convert to base64 with compression
-          const compressedData = canvas.toDataURL('image/jpeg', this.QUALITY)
-          
-          // Check if compressed size is acceptable for localStorage
-          if (compressedData.length > 500000) { // ~500KB limit
-            // Try with lower quality
-            const lowerQualityData = canvas.toDataURL('image/jpeg', 0.5)
-            if (lowerQualityData.length > 500000) {
-              reject(new Error('Image too large even after compression. Please use a smaller image.'))
-              return
-            }
-            this.saveCompressedLogo(lowerQualityData, file, resolve, reject)
-          } else {
-            this.saveCompressedLogo(compressedData, file, resolve, reject)
-          }
-          
+          this.compressImageWithSteps(img, file, resolve, reject)
         } catch (error) {
-          reject(new Error('Failed to compress image'))
+          reject(new Error('Failed to compress image: ' + error.message))
         }
       }
       
@@ -173,13 +146,61 @@ export class LogoManager {
     })
   }
 
-  static calculateDimensions(originalWidth, originalHeight) {
+  static compressImageWithSteps(img, originalFile, resolve, reject) {
+    const canvas = document.createElement('canvas')
+    const ctx = canvas.getContext('2d')
+    
+    // Start with smaller dimensions for localStorage optimization
+    let { width, height } = this.calculateDimensions(img.width, img.height, 200, 200)
+    
+    canvas.width = width
+    canvas.height = height
+    
+    // Draw image with high quality rendering
+    ctx.imageSmoothingEnabled = true
+    ctx.imageSmoothingQuality = 'high'
+    ctx.drawImage(img, 0, 0, width, height)
+    
+    // Try multiple compression levels
+    const qualities = [0.7, 0.5, 0.3, 0.2, 0.1]
+    
+    for (const quality of qualities) {
+      const compressedData = canvas.toDataURL('image/jpeg', quality)
+      
+      // Target: under 200KB for localStorage safety
+      if (compressedData.length < 200000) {
+        this.saveCompressedLogo(compressedData, originalFile, quality, resolve, reject)
+        return
+      }
+    }
+    
+    // If still too large, reduce dimensions further
+    const smallerDimensions = this.calculateDimensions(img.width, img.height, 150, 150)
+    canvas.width = smallerDimensions.width
+    canvas.height = smallerDimensions.height
+    
+    ctx.drawImage(img, 0, 0, smallerDimensions.width, smallerDimensions.height)
+    
+    // Try again with smallest dimensions
+    for (const quality of qualities) {
+      const compressedData = canvas.toDataURL('image/jpeg', quality)
+      
+      if (compressedData.length < 200000) {
+        this.saveCompressedLogo(compressedData, originalFile, quality, resolve, reject)
+        return
+      }
+    }
+    
+    reject(new Error('Unable to compress image enough for storage. Please use a smaller or simpler image.'))
+  }
+
+  static calculateDimensions(originalWidth, originalHeight, maxWidth = this.MAX_WIDTH, maxHeight = this.MAX_HEIGHT) {
     let width = originalWidth
     let height = originalHeight
     
     // Scale down if larger than max dimensions
-    if (width > this.MAX_WIDTH || height > this.MAX_HEIGHT) {
-      const ratio = Math.min(this.MAX_WIDTH / width, this.MAX_HEIGHT / height)
+    if (width > maxWidth || height > maxHeight) {
+      const ratio = Math.min(maxWidth / width, maxHeight / height)
       width = Math.round(width * ratio)
       height = Math.round(height * ratio)
     }
@@ -187,14 +208,29 @@ export class LogoManager {
     return { width, height }
   }
 
-  static saveCompressedLogo(logoData, originalFile, resolve, reject) {
+  static saveCompressedLogo(logoData, originalFile, quality, resolve, reject) {
     try {
+      // Clear any existing large data first
+      this.removeLogo()
+      
       const logoInfo = {
         name: originalFile.name,
         originalSize: originalFile.size,
         compressedSize: Math.round(logoData.length * 0.75), // Approximate binary size
+        compressionQuality: quality,
         type: 'image/jpeg',
         uploadDate: new Date().toISOString()
+      }
+
+      // Test localStorage space before saving
+      try {
+        localStorage.setItem(this.LOGO_KEY + '_test', logoData)
+        localStorage.removeItem(this.LOGO_KEY + '_test')
+      } catch (testError) {
+        if (testError.name === 'QuotaExceededError') {
+          reject(new Error('Not enough storage space available. Please clear some browser data.'))
+          return
+        }
       }
 
       // Save to localStorage
@@ -204,7 +240,7 @@ export class LogoManager {
       resolve({ logoData, logoInfo })
     } catch (error) {
       if (error.name === 'QuotaExceededError') {
-        reject(new Error('Storage quota exceeded. Please clear some data or use a smaller image.'))
+        reject(new Error('Storage quota exceeded. Please clear browser data or use a smaller image.'))
       } else {
         reject(error)
       }

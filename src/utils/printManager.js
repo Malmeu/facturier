@@ -1,6 +1,6 @@
 // Print utilities for billing documents
 export class PrintManager {
-  static printDocument(elementId, title = 'Document') {
+  static printDocument(elementId, title = 'Document', templateId = 'classic') {
     try {
       const element = document.getElementById(elementId)
       if (!element) {
@@ -10,8 +10,8 @@ export class PrintManager {
       // Create a new window for printing
       const printWindow = window.open('', '_blank', 'width=800,height=600')
       
-      // Create print-optimized HTML
-      const printHTML = this.createPrintHTML(element.innerHTML, title)
+      // Create print-optimized HTML with template support
+      const printHTML = this.createPrintHTML(element.innerHTML, title, templateId)
       
       printWindow.document.write(printHTML)
       printWindow.document.close()
@@ -28,7 +28,77 @@ export class PrintManager {
     }
   }
 
-  static createPrintHTML(content, title) {
+  static getTemplateCSS(templateId) {
+    // Define template colors and styles
+    const templates = {
+      classic: {
+        primary: '#1f2937',
+        secondary: '#6b7280',
+        accent: '#3b82f6',
+        headerGradient: 'linear-gradient(135deg, #1f2937 0%, #374151 100%)',
+        accentGradient: 'linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%)',
+        border: '#e5e7eb'
+      },
+      modern: {
+        primary: '#6366f1',
+        secondary: '#8b5cf6',
+        accent: '#06b6d4',
+        headerGradient: 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)',
+        accentGradient: 'linear-gradient(135deg, #06b6d4 0%, #0891b2 100%)',
+        border: '#e0e7ff'
+      },
+      elegant: {
+        primary: '#92400e',
+        secondary: '#d97706',
+        accent: '#f59e0b',
+        headerGradient: 'linear-gradient(135deg, #92400e 0%, #d97706 100%)',
+        accentGradient: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)',
+        border: '#fef3c7'
+      },
+      fresh: {
+        primary: '#059669',
+        secondary: '#10b981',
+        accent: '#34d399',
+        headerGradient: 'linear-gradient(135deg, #059669 0%, #10b981 100%)',
+        accentGradient: 'linear-gradient(135deg, #34d399 0%, #10b981 100%)',
+        border: '#d1fae5'
+      },
+      corporate: {
+        primary: '#1e40af',
+        secondary: '#3b82f6',
+        accent: '#60a5fa',
+        headerGradient: 'linear-gradient(135deg, #1e40af 0%, #3b82f6 100%)',
+        accentGradient: 'linear-gradient(135deg, #60a5fa 0%, #3b82f6 100%)',
+        border: '#dbeafe'
+      },
+      vibrant: {
+        primary: '#dc2626',
+        secondary: '#f97316',
+        accent: '#eab308',
+        headerGradient: 'linear-gradient(135deg, #dc2626 0%, #f97316 100%)',
+        accentGradient: 'linear-gradient(135deg, #eab308 0%, #f97316 100%)',
+        border: '#fed7d7'
+      }
+    }
+
+    const template = templates[templateId] || templates.classic
+
+    return `
+      .template-${templateId} {
+        --template-primary: ${template.primary};
+        --template-secondary: ${template.secondary};
+        --template-accent: ${template.accent};
+        --template-header-gradient: ${template.headerGradient};
+        --template-accent-gradient: ${template.accentGradient};
+        --template-border: ${template.border};
+      }
+    `
+  }
+
+  static createPrintHTML(content, title, templateId = 'classic') {
+    // Import template utilities to generate CSS
+    const templateCSS = this.getTemplateCSS(templateId)
+    
     return `
       <!DOCTYPE html>
       <html>
@@ -57,6 +127,34 @@ export class PrintManager {
             
             .no-print {
               display: none !important;
+            }
+            
+            /* Template-specific CSS */
+            ${templateCSS}
+            
+            /* Document header styles */
+            .document-header {
+              background: var(--template-header-gradient, #1f2937);
+              color: white;
+              padding: 20px;
+              margin-bottom: 20px;
+            }
+            
+            .document-accent {
+              background: var(--template-accent-gradient, #3b82f6);
+              color: white;
+            }
+            
+            .document-primary {
+              color: var(--template-primary, #1f2937);
+            }
+            
+            .document-secondary {
+              color: var(--template-secondary, #6b7280);
+            }
+            
+            .document-border {
+              border-color: var(--template-border, #e5e7eb);
             }
             
             /* Invoice specific styles */
@@ -89,16 +187,17 @@ export class PrintManager {
             }
             
             table th {
-              background-color: #f5f5f5;
-              border: 1px solid #ddd;
-              padding: 8px;
+              background: var(--template-header-gradient, #f5f5f5);
+              border: 1px solid var(--template-border, #ddd);
+              padding: 12px;
               text-align: left;
               font-weight: bold;
+              color: white;
             }
             
             table td {
-              border: 1px solid #ddd;
-              padding: 8px;
+              border: 1px solid var(--template-border, #ddd);
+              padding: 10px;
             }
             
             .totals-section {
@@ -148,11 +247,16 @@ export class PrintManager {
                 margin: 0;
                 padding: 0;
               }
+              
+              .document-header, .document-accent {
+                -webkit-print-color-adjust: exact;
+                print-color-adjust: exact;
+              }
             }
           </style>
         </head>
         <body>
-          <div class="print-container">
+          <div class="print-container template-${templateId}">
             ${content}
           </div>
           <div class="footer">
@@ -163,18 +267,20 @@ export class PrintManager {
     `
   }
 
-  static printInvoice(invoice) {
+  static printInvoice(invoice, options = {}) {
     try {
+      const templateId = options.template || 'classic'
+      
       // Create a temporary element with invoice content
       const tempDiv = document.createElement('div')
       tempDiv.id = 'temp-invoice-print'
-      tempDiv.innerHTML = this.generateInvoiceHTML(invoice)
+      tempDiv.innerHTML = this.generateInvoiceHTML(invoice, options)
       tempDiv.style.display = 'none'
       
       document.body.appendChild(tempDiv)
       
-      // Print the invoice
-      this.printDocument('temp-invoice-print', `Facture ${invoice.number}`)
+      // Print the invoice with template support
+      this.printDocument('temp-invoice-print', `Facture ${invoice.number}`, templateId)
       
       // Clean up
       setTimeout(() => {
@@ -187,17 +293,23 @@ export class PrintManager {
     }
   }
 
-  static generateInvoiceHTML(invoice) {
+  static generateInvoiceHTML(invoice, options = {}) {
+    const template = options.template || 'classic'
+    const logo = options.logo
+    
     return `
-      <div class="invoice-document">
+      <div class="invoice-document template-${template}">
         <!-- Header -->
-        <div class="invoice-header">
-          <div style="display: flex; justify-content: space-between; align-items: center;">
-            <div>
-              <div class="invoice-title">FACTURE</div>
-              <div>N° ${invoice.number}</div>
+        <div class="invoice-header document-header">
+          <div style="display: flex; justify-content: space-between; align-items: center; padding: 20px;">
+            <div style="display: flex; align-items: center;">
+              ${logo ? `<img src="${logo}" alt="Logo" style="width: 60px; height: 60px; object-fit: contain; margin-right: 20px; background: white; padding: 5px; border-radius: 5px;" />` : ''}
+              <div>
+                <div class="invoice-title" style="font-size: 24px; font-weight: bold; color: white;">FACTURE</div>
+                <div style="color: white; opacity: 0.9;">N° ${invoice.number}</div>
+              </div>
             </div>
-            <div style="text-align: right;">
+            <div style="text-align: right; color: white; opacity: 0.9;">
               <div>Date: ${invoice.date}</div>
               <div>Échéance: ${invoice.dueDate}</div>
             </div>
@@ -205,18 +317,22 @@ export class PrintManager {
         </div>
 
         <!-- Company and Customer Info -->
-        <div style="display: flex; justify-content: space-between; margin: 30px 0;">
-          <div class="company-info">
-            <h3>De:</h3>
-            < <div><strong>${invoice.company.name || "Nom de l'entreprise"}</strong></div>
+        <div style="display: flex; justify-content: space-between; margin: 30px 0; gap: 20px;">
+          <div class="company-info" style="flex: 1;">
+            <div class="document-accent" style="padding: 10px; margin-bottom: 10px; border-radius: 5px;">
+              <h3 style="margin: 0; color: white;">De:</h3>
+            </div>
+            <div><strong>${invoice.company.name || "Nom de l'entreprise"}</strong></div>
             <div>${invoice.company.address || ''}</div>
             <div>${invoice.company.city || ''} ${invoice.company.postalCode || ''}</div>
             ${invoice.company.taxId ? `<div>NIF: ${invoice.company.taxId}</div>` : ''}
             <div>${invoice.company.phone || ''}</div>
             <div>${invoice.company.email || ''}</div>
           </div>
-          <div class="customer-info">
-            <h3>À:</h3>
+          <div class="customer-info" style="flex: 1;">
+            <div class="document-accent" style="padding: 10px; margin-bottom: 10px; border-radius: 5px;">
+              <h3 style="margin: 0; color: white;">À:</h3>
+            </div>
             <div><strong>${invoice.customer.name || 'Nom du client'}</strong></div>
             <div>${invoice.customer.address || ''}</div>
             <div>${invoice.customer.city || ''} ${invoice.customer.postalCode || ''}</div>
@@ -226,39 +342,39 @@ export class PrintManager {
         </div>
 
         <!-- Items Table -->
-        <table>
+        <table style="width: 100%; border-collapse: collapse; margin: 20px 0;">
           <thead>
-            <tr>
-              <th>Description</th>
-              <th>Qté</th>
-              <th>P.U. (DZD)</th>
-              <th>Total (DZD)</th>
+            <tr class="document-header">
+              <th style="padding: 12px; text-align: left; color: white;">Description</th>
+              <th style="padding: 12px; text-align: center; color: white;">Qté</th>
+              <th style="padding: 12px; text-align: right; color: white;">P.U. (DZD)</th>
+              <th style="padding: 12px; text-align: right; color: white;">Total (DZD)</th>
             </tr>
           </thead>
           <tbody>
-            ${invoice.items.map(item => `
-              <tr>
-                <td>${item.description}</td>
-                <td style="text-align: center;">${item.quantity}</td>
-                <td style="text-align: right;">${item.unitPrice.toFixed(2)}</td>
-                <td style="text-align: right;">${item.total.toFixed(2)}</td>
+            ${invoice.items.map((item, index) => `
+              <tr style="${index % 2 === 1 ? 'background-color: #f9f9f9;' : ''}">
+                <td style="padding: 10px; border-bottom: 1px solid #eee;">${item.description}</td>
+                <td style="padding: 10px; text-align: center; border-bottom: 1px solid #eee;">${item.quantity}</td>
+                <td style="padding: 10px; text-align: right; border-bottom: 1px solid #eee;">${item.unitPrice.toFixed(2)}</td>
+                <td style="padding: 10px; text-align: right; border-bottom: 1px solid #eee;">${item.total.toFixed(2)}</td>
               </tr>
             `).join('')}
           </tbody>
         </table>
 
         <!-- Totals -->
-        <div class="totals-section">
-          <div style="width: 300px; margin-left: auto;">
-            <div style="display: flex; justify-content: space-between; margin: 5px 0;">
+        <div class="totals-section" style="margin-top: 30px;">
+          <div style="width: 300px; margin-left: auto; padding: 20px; border-radius: 10px;" class="document-accent">
+            <div style="display: flex; justify-content: space-between; margin: 5px 0; color: white;">
               <span>Sous-total:</span>
               <span>${invoice.subtotal.toFixed(2)} DZD</span>
             </div>
-            <div style="display: flex; justify-content: space-between; margin: 5px 0;">
+            <div style="display: flex; justify-content: space-between; margin: 5px 0; color: white;">
               <span>TVA (${invoice.taxRate}%):</span>
               <span>${invoice.taxAmount.toFixed(2)} DZD</span>
             </div>
-            <div class="total-line" style="display: flex; justify-content: space-between; margin: 10px 0; padding: 10px 0; font-size: 16px;">
+            <div style="display: flex; justify-content: space-between; margin: 10px 0; padding: 10px 0; font-size: 18px; font-weight: bold; border-top: 2px solid rgba(255,255,255,0.3); color: white;">
               <span>TOTAL:</span>
               <span>${invoice.total.toFixed(2)} DZD</span>
             </div>
@@ -267,17 +383,17 @@ export class PrintManager {
 
         <!-- Notes and Terms -->
         ${invoice.notes || invoice.terms ? `
-          <div class="notes-section">
+          <div class="notes-section" style="margin-top: 30px;">
             ${invoice.notes ? `
               <div style="margin: 20px 0;">
-                <h4>Notes:</h4>
-                <p>${invoice.notes}</p>
+                <h4 class="document-primary">Notes:</h4>
+                <p>${invoice.notes.replace(/<[^>]*>/g, '')}</p>
               </div>
             ` : ''}
             ${invoice.terms ? `
               <div style="margin: 20px 0;">
-                <h4>Conditions de paiement:</h4>
-                <p>${invoice.terms}</p>
+                <h4 class="document-primary">Conditions de paiement:</h4>
+                <p>${invoice.terms.replace(/<[^>]*>/g, '')}</p>
               </div>
             ` : ''}
           </div>
@@ -289,6 +405,8 @@ export class PrintManager {
   // Print order functionality
   static printOrder(order, options = {}) {
     try {
+      const templateId = options.template || 'classic'
+      
       // Create a temporary element with order content
       const tempDiv = document.createElement('div')
       tempDiv.id = 'temp-order-print'
@@ -297,8 +415,8 @@ export class PrintManager {
       
       document.body.appendChild(tempDiv)
       
-      // Print the order
-      this.printDocument('temp-order-print', `Bon de Commande ${order.number}`)
+      // Print the order with template support
+      this.printDocument('temp-order-print', `Bon de Commande ${order.number}`, templateId)
       
       // Clean up
       setTimeout(() => {
@@ -314,6 +432,8 @@ export class PrintManager {
   // Print delivery functionality
   static printDelivery(delivery, options = {}) {
     try {
+      const templateId = options.template || 'classic'
+      
       // Create a temporary element with delivery content
       const tempDiv = document.createElement('div')
       tempDiv.id = 'temp-delivery-print'
@@ -322,8 +442,8 @@ export class PrintManager {
       
       document.body.appendChild(tempDiv)
       
-      // Print the delivery
-      this.printDocument('temp-delivery-print', `Bon de Livraison ${delivery.number}`)
+      // Print the delivery with template support
+      this.printDocument('temp-delivery-print', `Bon de Livraison ${delivery.number}`, templateId)
       
       // Clean up
       setTimeout(() => {
