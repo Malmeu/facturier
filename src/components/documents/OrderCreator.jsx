@@ -4,8 +4,11 @@ import { PDFGenerator } from '../../utils/pdfGenerator'
 import { PrintManager } from '../../utils/printManager'
 import { documentTemplates, LogoManager, SettingsManager, TemplateUtils } from '../../utils/templateSystem'
 import WYSIWYGEditor from '../common/WYSIWYGEditor'
+import { DataService } from '../../services/dataService'
+import { useAuth } from '../../contexts/AuthContext'
 
 const OrderCreator = ({ currentLang, languages }) => {
+  const { user } = useAuth()
   const [selectedTemplate, setSelectedTemplate] = useState('classic')
   const [showTemplateSelector, setShowTemplateSelector] = useState(false)
   const [logo, setLogo] = useState(null)
@@ -133,9 +136,13 @@ const OrderCreator = ({ currentLang, languages }) => {
     }
   }
 
-  const saveOrder = () => {
+  const saveOrder = async () => {
     try {
-      const orders = JSON.parse(localStorage.getItem('orders') || '[]')
+      if (!user) {
+        alert('Vous devez être connecté pour sauvegarder un bon de commande')
+        return
+      }
+      
       const orderToSave = {
         ...order,
         id: Date.now(),
@@ -144,11 +151,16 @@ const OrderCreator = ({ currentLang, languages }) => {
         createdAt: new Date().toISOString()
       }
       
-      orders.push(orderToSave)
-      localStorage.setItem('orders', JSON.stringify(orders))
-      alert('Bon de commande sauvegardé avec succès!')
+      const result = await DataService.saveDocument('orders', orderToSave)
+      
+      if (result.success) {
+        alert('Bon de commande sauvegardé avec succès!')
+      } else {
+        alert(`Erreur lors de la sauvegarde: ${result.error}`)
+      }
     } catch (error) {
-      alert('Erreur lors de la sauvegarde')
+      console.error('Error saving order:', error)
+      alert('Erreur lors de la sauvegarde. Veuillez réessayer.')
     }
   }
 

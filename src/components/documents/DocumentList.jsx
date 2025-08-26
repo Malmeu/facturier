@@ -2,8 +2,11 @@ import React, { useState, useEffect } from 'react'
 import { FileText, ShoppingCart, Truck, Plus, Eye, Download, Edit, Trash2, Search } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { format } from 'date-fns'
+import { DataService } from '../../services/dataService'
+import { useAuth } from '../../contexts/AuthContext'
 
 const DocumentList = ({ type, currentLang, languages }) => {
+  const { user } = useAuth()
   const [documents, setDocuments] = useState([])
   const [searchTerm, setSearchTerm] = useState('')
   const [filteredDocuments, setFilteredDocuments] = useState([])
@@ -13,22 +16,29 @@ const DocumentList = ({ type, currentLang, languages }) => {
       title: 'Factures',
       icon: FileText,
       color: 'blue',
-      createPath: '/create/invoice',
+      createPath: '/invoice',
       storageKey: 'invoices'
     },
     order: {
       title: 'Bons de Commande',
       icon: ShoppingCart,
       color: 'green',
-      createPath: '/create/order',
+      createPath: '/order',
       storageKey: 'orders'
     },
     delivery: {
       title: 'Bons de Livraison',
       icon: Truck,
       color: 'purple',
-      createPath: '/create/delivery',
+      createPath: '/delivery',
       storageKey: 'deliveries'
+    },
+    all: {
+      title: 'Tous les Documents',
+      icon: FileText,
+      color: 'blue',
+      createPath: '/invoice',
+      storageKey: 'all'
     }
   }
 
@@ -36,11 +46,39 @@ const DocumentList = ({ type, currentLang, languages }) => {
   const IconComponent = config.icon
 
   useEffect(() => {
-    // Load documents from localStorage
-    const savedDocuments = JSON.parse(localStorage.getItem(config.storageKey) || '[]')
-    setDocuments(savedDocuments)
-    setFilteredDocuments(savedDocuments)
-  }, [config.storageKey])
+    // Load user-specific documents
+    const loadDocuments = async () => {
+      if (!user) return
+      
+      try {
+        let result
+        if (type === 'all') {
+          result = await DataService.getAllUserDocuments()
+          if (result.success) {
+            const allDocs = [
+              ...result.data.invoices,
+              ...result.data.orders,
+              ...result.data.deliveries
+            ]
+            setDocuments(allDocs)
+            setFilteredDocuments(allDocs)
+          }
+        } else {
+          result = await DataService.getUserDocuments(config.storageKey)
+          if (result.success) {
+            setDocuments(result.data)
+            setFilteredDocuments(result.data)
+          }
+        }
+      } catch (error) {
+        console.error('Error loading documents:', error)
+        setDocuments([])
+        setFilteredDocuments([])
+      }
+    }
+
+    loadDocuments()
+  }, [config.storageKey, user, type])
 
   useEffect(() => {
     // Filter documents based on search term
@@ -52,11 +90,34 @@ const DocumentList = ({ type, currentLang, languages }) => {
     setFilteredDocuments(filtered)
   }, [searchTerm, documents])
 
-  const deleteDocument = (docId) => {
+  const deleteDocument = async (docId) => {
     if (window.confirm('Êtes-vous sûr de vouloir supprimer ce document ?')) {
-      const updatedDocuments = documents.filter(doc => doc.id !== docId)
-      setDocuments(updatedDocuments)
-      localStorage.setItem(config.storageKey, JSON.stringify(updatedDocuments))
+      try {
+        // Find the document to determine its type
+        const docToDelete = documents.find(doc => doc.id === docId)
+        if (!docToDelete) return
+        
+        const docType = docToDelete.type === 'invoice' ? 'invoices' : 
+                       docToDelete.type === 'order' ? 'orders' : 'deliveries'
+        
+        const result = await DataService.deleteDocument(docType, docId)
+        
+        if (result.success) {
+          // Update local state
+          const updatedDocuments = documents.filter(doc => doc.id !== docId)
+          setDocuments(updatedDocuments)
+          setFilteredDocuments(updatedDocuments.filter(doc => 
+            doc.number?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            doc.customer?.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            doc.company?.name?.toLowerCase().includes(searchTerm.toLowerCase())
+          ))
+        } else {
+          alert(`Erreur lors de la suppression: ${result.error}`)
+        }
+      } catch (error) {
+        console.error('Error deleting document:', error)
+        alert('Erreur lors de la suppression. Veuillez réessayer.')
+      }
     }
   }
 

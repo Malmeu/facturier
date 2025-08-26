@@ -21,8 +21,11 @@ import { PrintManager } from '../../utils/printManager'
 import { AlgerianFormatting, AlgerianValidation, AlgerianDefaults } from '../../utils/algerianTemplates'
 import { documentTemplates, LogoManager, SettingsManager, TemplateUtils } from '../../utils/templateSystem'
 import WYSIWYGEditor from '../common/WYSIWYGEditor'
+import { DataService } from '../../services/dataService'
+import { useAuth } from '../../contexts/AuthContext'
 
 const InvoiceCreator = ({ currentLang, languages }) => {
+  const { user } = useAuth()
   const [selectedTemplate, setSelectedTemplate] = useState('classic')
   const [showTemplateSelector, setShowTemplateSelector] = useState(false)
   const [logo, setLogo] = useState(null)
@@ -195,19 +198,32 @@ const InvoiceCreator = ({ currentLang, languages }) => {
     }
   }
 
-  const saveInvoice = () => {
-    // Save to localStorage for now
-    const savedInvoices = JSON.parse(localStorage.getItem('invoices') || '[]')
-    const invoiceToSave = {
-      ...invoice,
-      id: Date.now(),
-      createdAt: new Date().toISOString(),
-      type: 'invoice',
-      template: selectedTemplate
+  const saveInvoice = async () => {
+    try {
+      if (!user) {
+        alert('Vous devez être connecté pour sauvegarder une facture')
+        return
+      }
+      
+      const invoiceToSave = {
+        ...invoice,
+        id: Date.now(),
+        createdAt: new Date().toISOString(),
+        type: 'invoice',
+        template: selectedTemplate
+      }
+      
+      const result = await DataService.saveDocument('invoices', invoiceToSave)
+      
+      if (result.success) {
+        alert('Facture sauvegardée avec succès!')
+      } else {
+        alert(`Erreur lors de la sauvegarde: ${result.error}`)
+      }
+    } catch (error) {
+      console.error('Error saving invoice:', error)
+      alert('Erreur lors de la sauvegarde. Veuillez réessayer.')
     }
-    savedInvoices.push(invoiceToSave)
-    localStorage.setItem('invoices', JSON.stringify(savedInvoices))
-    alert('Facture sauvegardée avec succès!')
   }
 
   const exportToPDF = async () => {

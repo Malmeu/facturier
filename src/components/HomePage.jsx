@@ -14,9 +14,11 @@ import {
   Star,
   Download
 } from 'lucide-react'
+import { useAuth } from '../contexts/AuthContext'
 
 const HomePage = ({ currentLang, languages }) => {
   const currentTexts = languages[currentLang]
+  const { isAuthenticated } = useAuth()
 
   // Icon mapping for features
   const featureIcons = [
@@ -50,19 +52,39 @@ const HomePage = ({ currentLang, languages }) => {
             </div>
             
             <div className="animate-fadeInUp flex flex-col sm:flex-row gap-4 justify-center items-center">
-              <Link 
-                to="/create/invoice"
-                className="gradient-primary text-white px-8 py-4 rounded-lg font-semibold text-lg hover:shadow-lg transform hover:scale-105 flex items-center gap-2"
-              >
-                {currentTexts.getStarted}
-                <ArrowRight className="w-5 h-5" />
-              </Link>
-              <a 
-                href="#features"
-                className="border-2 border-gray-300 text-gray-700 px-8 py-4 rounded-lg font-semibold text-lg hover:border-blue-500 hover:text-blue-600"
-              >
-                {currentTexts.learnMore}
-              </a>
+              {isAuthenticated ? (
+                <>
+                  <Link 
+                    to="/dashboard"
+                    className="gradient-primary text-white px-8 py-4 rounded-lg font-semibold text-lg hover:shadow-lg transform hover:scale-105 flex items-center gap-2"
+                  >
+                    Go to Dashboard
+                    <ArrowRight className="w-5 h-5" />
+                  </Link>
+                  <Link 
+                    to="/invoice"
+                    className="border-2 border-gray-300 text-gray-700 px-8 py-4 rounded-lg font-semibold text-lg hover:border-blue-500 hover:text-blue-600"
+                  >
+                    Create Invoice
+                  </Link>
+                </>
+              ) : (
+                <>
+                  <Link 
+                    to="/register"
+                    className="gradient-primary text-white px-8 py-4 rounded-lg font-semibold text-lg hover:shadow-lg transform hover:scale-105 flex items-center gap-2"
+                  >
+                    {currentTexts.getStarted}
+                    <ArrowRight className="w-5 h-5" />
+                  </Link>
+                  <a 
+                    href="#features"
+                    className="border-2 border-gray-300 text-gray-700 px-8 py-4 rounded-lg font-semibold text-lg hover:border-blue-500 hover:text-blue-600"
+                  >
+                    {currentTexts.learnMore}
+                  </a>
+                </>
+              )}
             </div>
           </div>
 

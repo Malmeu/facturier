@@ -1,7 +1,12 @@
 import React, { useState } from 'react'
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom'
+import { AuthProvider } from './contexts/AuthContext'
 import Navigation from './components/common/Navigation'
 import HomePage from './components/HomePage'
+import Dashboard from './components/Dashboard'
+import Login from './components/auth/Login'
+import Register from './components/auth/Register'
+import ProtectedRoute from './components/auth/ProtectedRoute'
 import InvoiceCreator from './components/documents/InvoiceCreator'
 import OrderCreator from './components/documents/OrderCreator'
 import DeliveryCreator from './components/documents/DeliveryCreator'
@@ -142,84 +147,123 @@ function App() {
   const [currentLang, setCurrentLang] = useState('fr')
 
   return (
-    <Router>
-      <div className="App min-h-screen bg-gray-50">
-        <Navigation 
-          currentLang={currentLang} 
-          setCurrentLang={setCurrentLang} 
-          languages={languages}
-        />
-        
-        <Routes>
-          <Route 
-            path="/" 
-            element={
-              <HomePage 
-                currentLang={currentLang} 
-                languages={languages}
-              />
-            } 
+    <AuthProvider>
+      <Router>
+        <div className="App min-h-screen bg-gray-50">
+          <Navigation 
+            currentLang={currentLang} 
+            setCurrentLang={setCurrentLang} 
+            languages={languages}
           />
-          <Route 
-            path="/create/invoice" 
-            element={
-              <InvoiceCreator 
-                currentLang={currentLang} 
-                languages={languages}
-              />
-            } 
-          />
-          <Route 
-            path="/create/order" 
-            element={
-              <OrderCreator 
-                currentLang={currentLang} 
-                languages={languages}
-              />
-            } 
-          />
-          <Route 
-            path="/create/delivery" 
-            element={
-              <DeliveryCreator 
-                currentLang={currentLang} 
-                languages={languages}
-              />
-            } 
-          />
-          <Route 
-            path="/invoices" 
-            element={
-              <DocumentList 
-                type="invoice" 
-                currentLang={currentLang} 
-                languages={languages}
-              />
-            } 
-          />
-          <Route 
-            path="/orders" 
-            element={
-              <DocumentList 
-                type="order" 
-                currentLang={currentLang} 
-                languages={languages}
-              />
-            } 
-          />
-          <Route 
-            path="/deliveries" 
-            element={
-              <DocumentList 
-                type="delivery" 
-                currentLang={currentLang} 
-                languages={languages}
-              />
-            } 
-          />
-        </Routes>
-      </div>
-    </Router>
+          
+          <Routes>
+            {/* Public routes */}
+            <Route 
+              path="/" 
+              element={
+                <HomePage 
+                  currentLang={currentLang} 
+                  languages={languages}
+                />
+              } 
+            />
+            <Route path="/login" element={<Login />} />
+            <Route path="/register" element={<Register />} />
+            
+            {/* Protected routes */}
+            <Route 
+              path="/dashboard" 
+              element={
+                <ProtectedRoute>
+                  <Dashboard />
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/invoice" 
+              element={
+                <ProtectedRoute>
+                  <InvoiceCreator 
+                    currentLang={currentLang} 
+                    languages={languages}
+                  />
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/order" 
+              element={
+                <ProtectedRoute>
+                  <OrderCreator 
+                    currentLang={currentLang} 
+                    languages={languages}
+                  />
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/delivery" 
+              element={
+                <ProtectedRoute>
+                  <DeliveryCreator 
+                    currentLang={currentLang} 
+                    languages={languages}
+                  />
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/documents" 
+              element={
+                <ProtectedRoute>
+                  <DocumentList 
+                    type="all" 
+                    currentLang={currentLang} 
+                    languages={languages}
+                  />
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/invoices" 
+              element={
+                <ProtectedRoute>
+                  <DocumentList 
+                    type="invoice" 
+                    currentLang={currentLang} 
+                    languages={languages}
+                  />
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/orders" 
+              element={
+                <ProtectedRoute>
+                  <DocumentList 
+                    type="order" 
+                    currentLang={currentLang} 
+                    languages={languages}
+                  />
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/deliveries" 
+              element={
+                <ProtectedRoute>
+                  <DocumentList 
+                    type="delivery" 
+                    currentLang={currentLang} 
+                    languages={languages}
+                  />
+                </ProtectedRoute>
+              } 
+            />
+          </Routes>
+        </div>
+      </Router>
+    </AuthProvider>
   )
 }
 

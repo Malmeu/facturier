@@ -4,8 +4,11 @@ import { PDFGenerator } from '../../utils/pdfGenerator'
 import { PrintManager } from '../../utils/printManager'
 import { documentTemplates, LogoManager, SettingsManager, TemplateUtils } from '../../utils/templateSystem'
 import WYSIWYGEditor from '../common/WYSIWYGEditor'
+import { DataService } from '../../services/dataService'
+import { useAuth } from '../../contexts/AuthContext'
 
 const DeliveryCreator = ({ currentLang, languages }) => {
+  const { user } = useAuth()
   const [selectedTemplate, setSelectedTemplate] = useState('classic')
   const [showTemplateSelector, setShowTemplateSelector] = useState(false)
   const [logo, setLogo] = useState(null)
@@ -111,9 +114,13 @@ const DeliveryCreator = ({ currentLang, languages }) => {
     }
   }
 
-  const saveDelivery = () => {
+  const saveDelivery = async () => {
     try {
-      const deliveries = JSON.parse(localStorage.getItem('deliveries') || '[]')
+      if (!user) {
+        alert('Vous devez être connecté pour sauvegarder un bon de livraison')
+        return
+      }
+      
       const deliveryToSave = {
         ...delivery,
         id: Date.now(),
@@ -122,11 +129,16 @@ const DeliveryCreator = ({ currentLang, languages }) => {
         createdAt: new Date().toISOString()
       }
       
-      deliveries.push(deliveryToSave)
-      localStorage.setItem('deliveries', JSON.stringify(deliveries))
-      alert('Bon de livraison sauvegardé avec succès!')
+      const result = await DataService.saveDocument('deliveries', deliveryToSave)
+      
+      if (result.success) {
+        alert('Bon de livraison sauvegardé avec succès!')
+      } else {
+        alert(`Erreur lors de la sauvegarde: ${result.error}`)
+      }
     } catch (error) {
-      alert('Erreur lors de la sauvegarde')
+      console.error('Error saving delivery:', error)
+      alert('Erreur lors de la sauvegarde. Veuillez réessayer.')
     }
   }
 
