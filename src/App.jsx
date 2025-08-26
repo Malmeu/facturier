@@ -11,6 +11,7 @@ import InvoiceCreator from './components/documents/InvoiceCreator'
 import OrderCreator from './components/documents/OrderCreator'
 import DeliveryCreator from './components/documents/DeliveryCreator'
 import DocumentList from './components/documents/DocumentList'
+import ProfileSettings from './components/ProfileSettings'
 import './App.css'
 
 // Language configurations
@@ -257,6 +258,14 @@ function App() {
                     currentLang={currentLang} 
                     languages={languages}
                   />
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/profile" 
+              element={
+                <ProtectedRoute>
+                  <ProfileSettings />
                 </ProtectedRoute>
               } 
             />

@@ -70,6 +70,8 @@ const InvoiceCreator = ({ currentLang, languages }) => {
     
     // Totals
     subtotal: 0,
+    globalDiscount: 0, // Global invoice discount percentage
+    globalDiscountAmount: 0, // Calculated global discount amount
     taxRate: AlgerianDefaults.company.taxRate, // 19% TVA Algeria
     taxAmount: 0,
     total: 0,
@@ -77,7 +79,10 @@ const InvoiceCreator = ({ currentLang, languages }) => {
     // Additional fields
     notes: '',
     terms: AlgerianDefaults.invoice.terms,
-    currency: 'DZD'
+    currency: 'DZD',
+    status: 'draft', // draft, sent, paid, cancelled
+    isPaid: false, // For revenue tracking
+    paidDate: null // Date when payment was received
   })
 
   // Load settings and logo
@@ -90,6 +95,41 @@ const InvoiceCreator = ({ currentLang, languages }) => {
     }
     
     setSelectedTemplate(settings.defaultTemplate)
+    
+    // Check if we're editing an existing document
+    const urlParams = new URLSearchParams(window.location.search)
+    const editId = urlParams.get('edit')
+    const documentToEdit = localStorage.getItem('documentToEdit')
+    
+    if (editId && documentToEdit) {
+      try {
+        const docData = JSON.parse(documentToEdit)
+        if (docData.id == editId) {
+          // Load the document data for editing
+          setInvoice({
+            ...docData,
+            // Ensure required fields exist
+            globalDiscount: docData.globalDiscount || 0,
+            globalDiscountAmount: docData.globalDiscountAmount || 0,
+            status: docData.status || 'draft',
+            isPaid: docData.isPaid || false,
+            paidDate: docData.paidDate || null
+          })
+          if (docData.template) {
+            setSelectedTemplate(docData.template)
+          }
+          // Clear the temporary storage and URL parameters
+          localStorage.removeItem('documentToEdit')
+          window.history.replaceState({}, document.title, window.location.pathname)
+          return
+        }
+      } catch (error) {
+        console.error('Error loading document for editing:', error)
+        localStorage.removeItem('documentToEdit')
+      }
+    }
+    
+    // Default new invoice setup
     setInvoice(prev => ({
       ...prev,
       company: { ...prev.company, ...settings.companyInfo },
@@ -101,16 +141,19 @@ const InvoiceCreator = ({ currentLang, languages }) => {
   // Calculate totals
   useEffect(() => {
     const subtotal = invoice.items.reduce((sum, item) => sum + item.total, 0)
-    const taxAmount = subtotal * (invoice.taxRate / 100)
-    const total = subtotal + taxAmount
+    const globalDiscountAmount = subtotal * (invoice.globalDiscount / 100)
+    const subtotalAfterGlobalDiscount = subtotal - globalDiscountAmount
+    const taxAmount = subtotalAfterGlobalDiscount * (invoice.taxRate / 100)
+    const total = subtotalAfterGlobalDiscount + taxAmount
     
     setInvoice(prev => ({
       ...prev,
       subtotal,
+      globalDiscountAmount,
       taxAmount,
       total
     }))
-  }, [invoice.items, invoice.taxRate])
+  }, [invoice.items, invoice.taxRate, invoice.globalDiscount])
 
   const updateInvoiceField = (field, value) => {
     setInvoice(prev => ({
@@ -154,7 +197,7 @@ const InvoiceCreator = ({ currentLang, languages }) => {
       [field]: value
     }
     
-    // Calculate total for this item
+    // Calculate total for this item (without individual discount, only global discount applies)
     if (field === 'quantity' || field === 'unitPrice') {
       newItems[index].total = newItems[index].quantity * newItems[index].unitPrice
     }
@@ -226,8 +269,57 @@ const InvoiceCreator = ({ currentLang, languages }) => {
     }
   }
 
+  const handleTemplateChange = (templateId) => {
+    setSelectedTemplate(templateId)
+    setShowTemplateSelector(false)
+  }
+
+  const markAsPaid = async () => {
+    try {
+      if (!user) {
+        alert('Vous devez être connecté pour marquer une facture comme payée')
+        return
+      }
+      
+      const paidInvoice = {
+        ...invoice,
+        status: 'paid',
+        isPaid: true,
+        paidDate: new Date().toISOString(),
+        id: invoice.id || Date.now(),
+        createdAt: invoice.createdAt || new Date().toISOString(),
+        type: 'invoice',
+        template: selectedTemplate
+      }
+      
+      const result = await DataService.saveDocument('invoices', paidInvoice)
+      
+      if (result.success) {
+        // Update local state
+        setInvoice(prev => ({
+          ...prev,
+          status: 'paid',
+          isPaid: true,
+          paidDate: new Date().toISOString()
+        }))
+        alert('Facture marquée comme payée! Elle sera incluse dans le Total Revenue.')
+      } else {
+        alert(`Erreur lors de la mise à jour: ${result.error}`)
+      }
+    } catch (error) {
+      console.error('Error marking invoice as paid:', error)
+      alert('Erreur lors de la mise à jour. Veuillez réessayer.')
+    }
+  }
+
   const exportToPDF = async () => {
     try {
+      // Check if PDFGenerator has the required method
+      if (typeof PDFGenerator.generateInvoicePDF !== 'function') {
+        alert('Fonctionnalité PDF en cours de développement')
+        return
+      }
+      
       const pdf = await PDFGenerator.generateInvoicePDF(invoice, {
         template: selectedTemplate,
         logo: logo?.logoData
@@ -236,12 +328,21 @@ const InvoiceCreator = ({ currentLang, languages }) => {
       PDFGenerator.downloadPDF(pdf, filename)
     } catch (error) {
       console.error('Error generating PDF:', error)
-      alert('Erreur lors de la génération du PDF. Veuillez réessayer.')
+      alert('Erreur lors de la génération du PDF. Veuillez utiliser l\'impression du navigateur.')
+      // Fallback to browser print
+      window.print()
     }
   }
 
   const previewPDF = async () => {
     try {
+      // Check if PDFGenerator has the required method
+      if (typeof PDFGenerator.generateInvoicePDF !== 'function' || typeof PDFGenerator.previewPDF !== 'function') {
+        alert('Aperçu PDF en cours de développement. Utilisation de l\'impression du navigateur.')
+        window.print()
+        return
+      }
+      
       const pdf = await PDFGenerator.generateInvoicePDF(invoice, {
         template: selectedTemplate,
         logo: logo?.logoData
@@ -249,19 +350,30 @@ const InvoiceCreator = ({ currentLang, languages }) => {
       PDFGenerator.previewPDF(pdf)
     } catch (error) {
       console.error('Error previewing PDF:', error)
-      alert('Erreur lors de l\'aperçu du PDF. Veuillez réessayer.')
+      alert('Erreur lors de l\'aperçu du PDF. Utilisation de l\'impression du navigateur.')
+      // Fallback to browser print
+      window.print()
     }
   }
 
   const printInvoice = () => {
     try {
+      // Check if PrintManager has the required method
+      if (typeof PrintManager.printInvoice !== 'function') {
+        // Fallback to browser print
+        window.print()
+        return
+      }
+      
       PrintManager.printInvoice(invoice, {
         template: selectedTemplate,
         logo: logo?.logoData
       })
     } catch (error) {
       console.error('Error printing invoice:', error)
-      alert('Erreur lors de l\'impression. Veuillez réessayer.')
+      alert('Erreur lors de l\'impression. Utilisation de l\'impression du navigateur.')
+      // Fallback to browser print
+      window.print()
     }
   }
 
@@ -277,7 +389,19 @@ const InvoiceCreator = ({ currentLang, languages }) => {
               </div>
               <div>
                 <h1 className="text-2xl font-bold text-gray-900">Nouvelle Facture</h1>
-                <p className="text-gray-500">Créez une facture professionnelle</p>
+                <div className="flex items-center space-x-2">
+                  <p className="text-gray-500">Créez une facture professionnelle</p>
+                  {invoice.isPaid && (
+                    <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                      ✓ Payé
+                    </span>
+                  )}
+                  {invoice.status === 'draft' && (
+                    <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
+                      Brouillon
+                    </span>
+                  )}
+                </div>
               </div>
             </div>
             
@@ -310,6 +434,15 @@ const InvoiceCreator = ({ currentLang, languages }) => {
                 <Save className="w-4 h-4 mr-2" />
                 Sauvegarder
               </button>
+              {!invoice.isPaid && (
+                <button
+                  onClick={markAsPaid}
+                  className="inline-flex items-center px-4 py-2 bg-green-600 text-white rounded-md shadow-sm text-sm font-medium hover:bg-green-700"
+                >
+                  <span className="w-4 h-4 mr-2">✓</span>
+                  Marquer Payé
+                </button>
+              )}
               <button
                 onClick={exportToPDF}
                 className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-md shadow-sm text-sm font-medium hover:bg-blue-700"
@@ -322,26 +455,39 @@ const InvoiceCreator = ({ currentLang, languages }) => {
 
           {/* Template Selector */}
           {showTemplateSelector && (
-            <div className="mt-6 p-4 bg-gray-50 rounded-lg">
-              <h3 className="text-lg font-medium text-gray-900 mb-4">Choisir un thème</h3>
-              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+            <div className="mt-6 p-6 bg-base-200 rounded-lg">
+              <h3 className="text-lg font-medium text-base-content mb-4 flex items-center">
+                <Palette className="w-5 h-5 mr-2" />
+                Choisir un thème
+              </h3>
+              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
                 {TemplateUtils.getTemplateList().map(template => (
-                  <button
+                  <div 
                     key={template.id}
-                    onClick={() => setSelectedTemplate(template.id)}
-                    className={`p-4 rounded-lg border-2 transition-all ${
+                    className={`card cursor-pointer transition-all hover:scale-105 ${
                       selectedTemplate === template.id
-                        ? 'border-blue-500 bg-blue-50'
-                        : 'border-gray-200 bg-white hover:border-gray-300'
+                        ? 'ring-2 ring-primary shadow-lg'
+                        : 'hover:shadow-md'
                     }`}
+                    onClick={() => handleTemplateChange(template.id)}
+                    data-theme={template.daisyTheme}
                   >
-                    <div 
-                      className="w-full h-12 rounded mb-2"
-                      style={{ background: template.gradients.header }}
-                    ></div>
-                    <p className="text-sm font-medium text-gray-900">{template.name}</p>
-                    <p className="text-xs text-gray-500">{template.description}</p>
-                  </button>
+                    <div className="card-body p-4">
+                      <div className="h-12 bg-gradient-to-r from-primary to-secondary rounded mb-3"></div>
+                      <h4 className="card-title text-sm">{template.name}</h4>
+                      <p className="text-xs opacity-70">{template.description}</p>
+                      <div className="flex gap-1 mt-2">
+                        <div className="w-3 h-3 rounded-full bg-primary"></div>
+                        <div className="w-3 h-3 rounded-full bg-secondary"></div>
+                        <div className="w-3 h-3 rounded-full bg-accent"></div>
+                      </div>
+                      {selectedTemplate === template.id && (
+                        <div className="badge badge-primary badge-sm mt-2">
+                          Sélectionné
+                        </div>
+                      )}
+                    </div>
+                  </div>
                 ))}
               </div>
             </div>
@@ -615,8 +761,8 @@ const InvoiceCreator = ({ currentLang, languages }) => {
               
               <div className="space-y-4">
                 {invoice.items.map((item, index) => (
-                  <div key={item.id} className="grid grid-cols-12 gap-3 items-end p-3 bg-gray-50 rounded-md">
-                    <div className="col-span-5">
+                  <div key={item.id} className="grid grid-cols-11 gap-3 items-end p-3 bg-gray-50 rounded-md">
+                    <div className="col-span-4">
                       <label className="block text-xs font-medium text-gray-700 mb-1">
                         Description
                       </label>
@@ -650,7 +796,7 @@ const InvoiceCreator = ({ currentLang, languages }) => {
                         className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500"
                       />
                     </div>
-                    <div className="col-span-2">
+                    <div className="col-span-4">
                       <label className="block text-xs font-medium text-gray-700 mb-1">
                         Total (DZD)
                       </label>
@@ -658,7 +804,7 @@ const InvoiceCreator = ({ currentLang, languages }) => {
                         type="text"
                         value={item.total.toFixed(2)}
                         readOnly
-                        className="w-full px-2 py-1 text-sm border border-gray-300 rounded bg-gray-100"
+                        className="w-full px-2 py-1 text-sm border border-gray-300 rounded bg-gray-100 font-medium"
                       />
                     </div>
                     <div className="col-span-1">
@@ -674,6 +820,123 @@ const InvoiceCreator = ({ currentLang, languages }) => {
                   </div>
                 ))}
               </div>
+            </div>
+
+            {/* Global Discount */}
+            <div className="bg-white rounded-lg shadow-sm border p-6">
+              <h2 className="text-lg font-semibold text-gray-900 mb-4">Remise globale</h2>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Remise globale (%)
+                  </label>
+                  <input
+                    type="number"
+                    step="0.1"
+                    min="0"
+                    max="100"
+                    value={invoice.globalDiscount}
+                    onChange={(e) => updateInvoiceField('globalDiscount', parseFloat(e.target.value) || 0)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    placeholder="0"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Montant de la remise (DZD)
+                  </label>
+                  <input
+                    type="text"
+                    value={invoice.globalDiscountAmount?.toFixed(2) || '0.00'}
+                    readOnly
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-100 text-red-600 font-medium"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Sous-total après remise (DZD)
+                  </label>
+                  <input
+                    type="text"
+                    value={(invoice.subtotal - (invoice.globalDiscountAmount || 0)).toFixed(2)}
+                    readOnly
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-100 font-medium"
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Payment Status */}
+            <div className="bg-white rounded-lg shadow-sm border p-6">
+              <h2 className="text-lg font-semibold text-gray-900 mb-4">Statut de paiement</h2>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Statut
+                  </label>
+                  <select
+                    value={invoice.status}
+                    onChange={(e) => updateInvoiceField('status', e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  >
+                    <option value="draft">Brouillon</option>
+                    <option value="sent">Envoyé</option>
+                    <option value="paid">Payé</option>
+                    <option value="cancelled">Annulé</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Inclure dans le chiffre d'affaires
+                  </label>
+                  <div className="flex items-center space-x-2 mt-2">
+                    <input
+                      type="checkbox"
+                      checked={invoice.isPaid}
+                      onChange={(e) => {
+                        updateInvoiceField('isPaid', e.target.checked)
+                        if (e.target.checked && !invoice.paidDate) {
+                          updateInvoiceField('paidDate', new Date().toISOString())
+                          updateInvoiceField('status', 'paid')
+                        }
+                      }}
+                      className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                    />
+                    <span className="text-sm text-gray-700">
+                      {invoice.isPaid ? 'Payé' : 'Non payé'}
+                    </span>
+                  </div>
+                </div>
+                {invoice.isPaid && invoice.paidDate && (
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Date de paiement
+                    </label>
+                    <input
+                      type="date"
+                      value={invoice.paidDate ? invoice.paidDate.split('T')[0] : ''}
+                      onChange={(e) => updateInvoiceField('paidDate', e.target.value ? new Date(e.target.value).toISOString() : null)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                  </div>
+                )}
+              </div>
+              {invoice.isPaid && (
+                <div className="mt-4 p-3 bg-green-50 rounded-md">
+                  <div className="flex">
+                    <div className="flex-shrink-0">
+                      <span className="text-green-400">✓</span>
+                    </div>
+                    <div className="ml-3">
+                      <p className="text-sm text-green-800">
+                        Cette facture sera incluse dans le calcul du Total Revenue.
+                        <br />
+                        <strong>Montant: {invoice.total.toFixed(2)} DZD</strong>
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* Notes and Terms */}
@@ -813,6 +1076,12 @@ const InvoiceCreator = ({ currentLang, languages }) => {
                       <span>Sous-total:</span>
                       <span>{AlgerianFormatting.formatCurrency(invoice.subtotal)}</span>
                     </div>
+                    {invoice.globalDiscount > 0 && (
+                      <div className="flex justify-between py-1" style={{ color: '#ffcccc' }}>
+                        <span>Remise globale ({invoice.globalDiscount}%):</span>
+                        <span>-{AlgerianFormatting.formatCurrency(invoice.globalDiscountAmount)}</span>
+                      </div>
+                    )}
                     <div className="flex justify-between py-1">
                       <span>TVA ({invoice.taxRate}%):</span>
                       <span>{AlgerianFormatting.formatCurrency(invoice.taxAmount)}</span>

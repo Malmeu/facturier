@@ -19,26 +19,29 @@ export class PDFGenerator {
       tempDiv.style.lineHeight = '1.4'
       tempDiv.style.color = '#000'
       
-      // Add template CSS
-      const templateCSS = TemplateUtils.generateTemplateCSS(options.template || 'classic')
-      const styleElement = document.createElement('style')
-      styleElement.textContent = `
-        ${templateCSS}
+      // Add template CSS with solid colors (avoid oklch)
+      const templateCSS = `
         .document-header {
-          background: var(--template-header-gradient) !important;
+          background: linear-gradient(135deg, #1f2937, #374151) !important;
           color: white !important;
         }
         .document-accent {
-          background: var(--template-accent-gradient) !important;
+          background: linear-gradient(135deg, #3b82f6, #1d4ed8) !important;
           color: white !important;
         }
         .document-primary {
-          color: var(--template-primary) !important;
+          color: #1f2937 !important;
         }
         .document-secondary {
-          color: var(--template-secondary) !important;
+          color: #6b7280 !important;
+        }
+        table th {
+          background: linear-gradient(135deg, #1f2937, #374151) !important;
+          color: white !important;
         }
       `
+      const styleElement = document.createElement('style')
+      styleElement.textContent = templateCSS
       
       // Generate HTML content using the print manager's HTML generator
       tempDiv.innerHTML = PrintManager.generateInvoiceHTML(invoice, options)
@@ -56,7 +59,20 @@ export class PDFGenerator {
         scrollX: 0,
         scrollY: 0,
         width: 794,
-        height: Math.max(1123, tempDiv.scrollHeight) // A4 height minimum
+        height: Math.max(1123, tempDiv.scrollHeight), // A4 height minimum
+        onclone: (clonedDoc) => {
+          // Replace any remaining oklch colors with fallbacks
+          const elements = clonedDoc.querySelectorAll('*')
+          elements.forEach(el => {
+            const computedStyle = window.getComputedStyle(el)
+            if (computedStyle.backgroundColor && computedStyle.backgroundColor.includes('oklch')) {
+              el.style.backgroundColor = '#3b82f6'
+            }
+            if (computedStyle.color && computedStyle.color.includes('oklch')) {
+              el.style.color = '#1f2937'
+            }
+          })
+        }
       })
       
       // Clean up
@@ -97,6 +113,28 @@ export class PDFGenerator {
     }
   }
 
+  // Download PDF function
+  static downloadPDF(pdf, filename = 'document.pdf') {
+    try {
+      pdf.save(filename)
+    } catch (error) {
+      console.error('Error downloading PDF:', error)
+      throw new Error('Failed to download PDF')
+    }
+  }
+
+  // Preview PDF function
+  static previewPDF(pdf) {
+    try {
+      const pdfBlob = pdf.output('blob')
+      const url = URL.createObjectURL(pdfBlob)
+      window.open(url, '_blank')
+    } catch (error) {
+      console.error('Error previewing PDF:', error)
+      throw new Error('Failed to preview PDF')
+    }
+  }
+
   // Generate Order PDF
   static async generateOrderPDF(order, options = {}) {
     try {
@@ -112,26 +150,29 @@ export class PDFGenerator {
       tempDiv.style.lineHeight = '1.4'
       tempDiv.style.color = '#000'
       
-      // Add template CSS
-      const templateCSS = TemplateUtils.generateTemplateCSS(options.template || 'classic')
-      const styleElement = document.createElement('style')
-      styleElement.textContent = `
-        ${templateCSS}
+      // Add template CSS with solid colors (avoid oklch)
+      const templateCSS = `
         .document-header {
-          background: var(--template-header-gradient) !important;
+          background: linear-gradient(135deg, #059669, #047857) !important;
           color: white !important;
         }
         .document-accent {
-          background: var(--template-accent-gradient) !important;
+          background: linear-gradient(135deg, #10b981, #059669) !important;
           color: white !important;
         }
         .document-primary {
-          color: var(--template-primary) !important;
+          color: #1f2937 !important;
         }
         .document-secondary {
-          color: var(--template-secondary) !important;
+          color: #6b7280 !important;
+        }
+        table th {
+          background: linear-gradient(135deg, #059669, #047857) !important;
+          color: white !important;
         }
       `
+      const styleElement = document.createElement('style')
+      styleElement.textContent = templateCSS
       
       // Generate HTML content using the print manager's HTML generator
       tempDiv.innerHTML = PrintManager.generateOrderHTML(order, options)
@@ -149,7 +190,20 @@ export class PDFGenerator {
         scrollX: 0,
         scrollY: 0,
         width: 794,
-        height: Math.max(1123, tempDiv.scrollHeight)
+        height: Math.max(1123, tempDiv.scrollHeight),
+        onclone: (clonedDoc) => {
+          // Replace any remaining oklch colors with fallbacks
+          const elements = clonedDoc.querySelectorAll('*')
+          elements.forEach(el => {
+            const computedStyle = window.getComputedStyle(el)
+            if (computedStyle.backgroundColor && computedStyle.backgroundColor.includes('oklch')) {
+              el.style.backgroundColor = '#10b981'
+            }
+            if (computedStyle.color && computedStyle.color.includes('oklch')) {
+              el.style.color = '#1f2937'
+            }
+          })
+        }
       })
       
       // Clean up
@@ -203,26 +257,29 @@ export class PDFGenerator {
       tempDiv.style.lineHeight = '1.4'
       tempDiv.style.color = '#000'
       
-      // Add template CSS
-      const templateCSS = TemplateUtils.generateTemplateCSS(options.template || 'classic')
-      const styleElement = document.createElement('style')
-      styleElement.textContent = `
-        ${templateCSS}
+      // Add template CSS with solid colors (avoid oklch)
+      const templateCSS = `
         .document-header {
-          background: var(--template-header-gradient) !important;
+          background: linear-gradient(135deg, #7c3aed, #5b21b6) !important;
           color: white !important;
         }
         .document-accent {
-          background: var(--template-accent-gradient) !important;
+          background: linear-gradient(135deg, #8b5cf6, #7c3aed) !important;
           color: white !important;
         }
         .document-primary {
-          color: var(--template-primary) !important;
+          color: #1f2937 !important;
         }
         .document-secondary {
-          color: var(--template-secondary) !important;
+          color: #6b7280 !important;
+        }
+        table th {
+          background: linear-gradient(135deg, #7c3aed, #5b21b6) !important;
+          color: white !important;
         }
       `
+      const styleElement = document.createElement('style')
+      styleElement.textContent = templateCSS
       
       // Generate HTML content using the print manager's HTML generator
       tempDiv.innerHTML = PrintManager.generateDeliveryHTML(delivery, options)
@@ -240,13 +297,26 @@ export class PDFGenerator {
         scrollX: 0,
         scrollY: 0,
         width: 794,
-        height: Math.max(1123, tempDiv.scrollHeight)
+        height: Math.max(1123, tempDiv.scrollHeight),
+        onclone: (clonedDoc) => {
+          // Replace any remaining oklch colors with fallbacks
+          const elements = clonedDoc.querySelectorAll('*')
+          elements.forEach(el => {
+            const computedStyle = window.getComputedStyle(el)
+            if (computedStyle.backgroundColor && computedStyle.backgroundColor.includes('oklch')) {
+              el.style.backgroundColor = '#8b5cf6'
+            }
+            if (computedStyle.color && computedStyle.color.includes('oklch')) {
+              el.style.color = '#1f2937'
+            }
+          })
+        }
       })
       
       // Clean up
       document.body.removeChild(tempDiv)
       document.head.removeChild(styleElement)
-      
+
       // Create PDF from canvas
       const pdf = new jsPDF('p', 'mm', 'a4')
       const pageWidth = pdf.internal.pageSize.getWidth()

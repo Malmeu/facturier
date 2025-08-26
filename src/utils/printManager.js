@@ -207,20 +207,21 @@ export class PrintManager {
     `
   }
 
-  static printInvoice(invoice, options = {}) {
+  // Print order functionality
+  static printOrder(order, options = {}) {
     try {
       const templateId = options.template || 'classic'
       
-      // Create a temporary element with invoice content
+      // Create a temporary element with order content
       const tempDiv = document.createElement('div')
-      tempDiv.id = 'temp-invoice-print'
-      tempDiv.innerHTML = this.generateInvoiceHTML(invoice, options)
+      tempDiv.id = 'temp-order-print'
+      tempDiv.innerHTML = this.generateOrderHTML(order, options)
       tempDiv.style.display = 'none'
       
       document.body.appendChild(tempDiv)
       
-      // Print the invoice with template support
-      this.printDocument('temp-invoice-print', `Facture ${invoice.number}`, templateId)
+      // Print the order with template support
+      this.printDocument('temp-order-print', `Bon de Commande ${order.number}`, templateId)
       
       // Clean up
       setTimeout(() => {
@@ -228,8 +229,35 @@ export class PrintManager {
       }, 1000)
       
     } catch (error) {
-      console.error('Error printing invoice:', error)
-      alert("Erreur lors de l'impression de la facture.")
+      console.error('Error printing order:', error)
+      alert("Erreur lors de l'impression du bon de commande.")
+    }
+  }
+
+  // Print delivery functionality
+  static printDelivery(delivery, options = {}) {
+    try {
+      const templateId = options.template || 'classic'
+      
+      // Create a temporary element with delivery content
+      const tempDiv = document.createElement('div')
+      tempDiv.id = 'temp-delivery-print'
+      tempDiv.innerHTML = this.generateDeliveryHTML(delivery, options)
+      tempDiv.style.display = 'none'
+      
+      document.body.appendChild(tempDiv)
+      
+      // Print the delivery with template support
+      this.printDocument('temp-delivery-print', `Bon de Livraison ${delivery.number}`, templateId)
+      
+      // Clean up
+      setTimeout(() => {
+        document.body.removeChild(tempDiv)
+      }, 1000)
+      
+    } catch (error) {
+      console.error('Error printing delivery:', error)
+      alert("Erreur lors de l'impression du bon de livraison.")
     }
   }
 
@@ -310,6 +338,12 @@ export class PrintManager {
               <span>Sous-total:</span>
               <span>${invoice.subtotal.toFixed(2)} DZD</span>
             </div>
+            ${invoice.globalDiscount > 0 ? `
+              <div style="display: flex; justify-content: space-between; margin: 5px 0; color: #ffcccc;">
+                <span>Remise globale (${invoice.globalDiscount}%):</span>
+                <span>-${invoice.globalDiscountAmount.toFixed(2)} DZD</span>
+              </div>
+            ` : ''}
             <div style="display: flex; justify-content: space-between; margin: 5px 0; color: white;">
               <span>TVA (${invoice.taxRate}%):</span>
               <span>${invoice.taxAmount.toFixed(2)} DZD</span>
@@ -340,60 +374,6 @@ export class PrintManager {
         ` : ''}
       </div>
     `
-  }
-
-  // Print order functionality
-  static printOrder(order, options = {}) {
-    try {
-      const templateId = options.template || 'classic'
-      
-      // Create a temporary element with order content
-      const tempDiv = document.createElement('div')
-      tempDiv.id = 'temp-order-print'
-      tempDiv.innerHTML = this.generateOrderHTML(order, options)
-      tempDiv.style.display = 'none'
-      
-      document.body.appendChild(tempDiv)
-      
-      // Print the order with template support
-      this.printDocument('temp-order-print', `Bon de Commande ${order.number}`, templateId)
-      
-      // Clean up
-      setTimeout(() => {
-        document.body.removeChild(tempDiv)
-      }, 1000)
-      
-    } catch (error) {
-      console.error('Error printing order:', error)
-      alert("Erreur lors de l'impression du bon de commande.")
-    }
-  }
-
-  // Print delivery functionality
-  static printDelivery(delivery, options = {}) {
-    try {
-      const templateId = options.template || 'classic'
-      
-      // Create a temporary element with delivery content
-      const tempDiv = document.createElement('div')
-      tempDiv.id = 'temp-delivery-print'
-      tempDiv.innerHTML = this.generateDeliveryHTML(delivery, options)
-      tempDiv.style.display = 'none'
-      
-      document.body.appendChild(tempDiv)
-      
-      // Print the delivery with template support
-      this.printDocument('temp-delivery-print', `Bon de Livraison ${delivery.number}`, templateId)
-      
-      // Clean up
-      setTimeout(() => {
-        document.body.removeChild(tempDiv)
-      }, 1000)
-      
-    } catch (error) {
-      console.error('Error printing delivery:', error)
-      alert("Erreur lors de l'impression du bon de livraison.")
-    }
   }
 
   static generateOrderHTML(order, options = {}) {
@@ -605,5 +585,73 @@ export class PrintManager {
         </div>
       </div>
     `
+  }
+
+  // Print specific document types
+  static printInvoice(invoice, options = {}) {
+    try {
+      const printHTML = this.createPrintHTML(
+        this.generateInvoiceHTML(invoice, options),
+        `Facture ${invoice.number}`,
+        options.template || 'classic'
+      )
+      
+      const printWindow = window.open('', '_blank', 'width=800,height=600')
+      printWindow.document.write(printHTML)
+      printWindow.document.close()
+      
+      printWindow.onload = () => {
+        printWindow.print()
+        printWindow.close()
+      }
+    } catch (error) {
+      console.error('Error printing invoice:', error)
+      // Fallback to browser print
+      window.print()
+    }
+  }
+
+  static printOrder(order, options = {}) {
+    try {
+      const printHTML = this.createPrintHTML(
+        this.generateOrderHTML(order, options),
+        `Bon de commande ${order.number}`,
+        options.template || 'classic'
+      )
+      
+      const printWindow = window.open('', '_blank', 'width=800,height=600')
+      printWindow.document.write(printHTML)
+      printWindow.document.close()
+      
+      printWindow.onload = () => {
+        printWindow.print()
+        printWindow.close()
+      }
+    } catch (error) {
+      console.error('Error printing order:', error)
+      window.print()
+    }
+  }
+
+  static printDelivery(delivery, options = {}) {
+    try {
+      const printHTML = this.createPrintHTML(
+        this.generateDeliveryHTML(delivery, options),
+        `Bon de livraison ${delivery.number}`,
+        options.template || 'classic'
+      )
+      
+      const printWindow = window.open('', '_blank', 'width=800,height=600')
+      printWindow.document.write(printHTML)
+      printWindow.document.close()
+      
+      printWindow.onload = () => {
+        printWindow.print()
+        printWindow.close()
+      }
+    } catch (error) {
+      console.error('Error printing delivery:', error)
+      window.print()
+    }
   }
 }

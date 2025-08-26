@@ -4,6 +4,8 @@ import { Link } from 'react-router-dom'
 import { format } from 'date-fns'
 import { DataService } from '../../services/dataService'
 import { useAuth } from '../../contexts/AuthContext'
+import { PDFGenerator } from '../../utils/pdfGenerator'
+import { PrintManager } from '../../utils/printManager'
 
 const DocumentList = ({ type, currentLang, languages }) => {
   const { user } = useAuth()
@@ -129,6 +131,73 @@ const DocumentList = ({ type, currentLang, languages }) => {
     }).format(amount)
   }
 
+  const viewDocument = async (doc) => {
+    try {
+      // Create a preview of the document
+      if (doc.type === 'invoice') {
+        PrintManager.printInvoice(doc, {
+          template: doc.template || 'classic',
+          logo: null // We'll get logo from settings if needed
+        })
+      } else if (doc.type === 'order') {
+        PrintManager.printOrder(doc, {
+          template: doc.template || 'classic',
+          logo: null
+        })
+      } else if (doc.type === 'delivery') {
+        PrintManager.printDelivery(doc, {
+          template: doc.template || 'classic',
+          logo: null
+        })
+      }
+    } catch (error) {
+      console.error('Error viewing document:', error)
+      alert('Erreur lors de la visualisation du document.')
+    }
+  }
+
+  const editDocument = (doc) => {
+    // Navigate to the appropriate editor page with the document data
+    const editPaths = {
+      invoice: '/invoice',
+      order: '/order',
+      delivery: '/delivery'
+    }
+    
+    const path = editPaths[doc.type]
+    if (path) {
+      // Store the document to edit in localStorage temporarily
+      localStorage.setItem('documentToEdit', JSON.stringify(doc))
+      window.location.href = `${path}?edit=${doc.id}`
+    }
+  }
+
+  const downloadDocument = async (doc) => {
+    try {
+      let pdf
+      const options = {
+        template: doc.template || 'classic',
+        logo: null // We'll get logo from settings if needed
+      }
+
+      if (doc.type === 'invoice') {
+        pdf = await PDFGenerator.generateInvoicePDF(doc, options)
+        PDFGenerator.downloadPDF(pdf, `facture-${doc.number}-${doc.date}.pdf`)
+      } else if (doc.type === 'order') {
+        pdf = await PDFGenerator.generateOrderPDF(doc, options)
+        PDFGenerator.downloadPDF(pdf, `bon-commande-${doc.number}-${doc.date}.pdf`)
+      } else if (doc.type === 'delivery') {
+        pdf = await PDFGenerator.generateDeliveryPDF(doc, options)
+        PDFGenerator.downloadPDF(pdf, `bon-livraison-${doc.number}-${doc.date}.pdf`)
+      }
+    } catch (error) {
+      console.error('Error downloading document:', error)
+      alert('Erreur lors du téléchargement. Utilisation de l\'impression du navigateur.')
+      // Fallback to print
+      viewDocument(doc)
+    }
+  }
+
   return (
     <div className="min-h-screen bg-gray-50 py-8">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -250,18 +319,31 @@ const DocumentList = ({ type, currentLang, languages }) => {
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                         <div className="flex items-center justify-end space-x-2">
-                          <button className="text-blue-600 hover:text-blue-900 p-1">
+                          <button 
+                            onClick={() => viewDocument(doc)}
+                            className="text-blue-600 hover:text-blue-900 p-1"
+                            title="Visualiser"
+                          >
                             <Eye className="w-4 h-4" />
                           </button>
-                          <button className="text-gray-600 hover:text-gray-900 p-1">
+                          <button 
+                            onClick={() => editDocument(doc)}
+                            className="text-gray-600 hover:text-gray-900 p-1"
+                            title="Modifier"
+                          >
                             <Edit className="w-4 h-4" />
                           </button>
-                          <button className="text-blue-600 hover:text-blue-900 p-1">
+                          <button 
+                            onClick={() => downloadDocument(doc)}
+                            className="text-blue-600 hover:text-blue-900 p-1"
+                            title="Télécharger PDF"
+                          >
                             <Download className="w-4 h-4" />
                           </button>
                           <button 
                             onClick={() => deleteDocument(doc.id)}
                             className="text-red-600 hover:text-red-900 p-1"
+                            title="Supprimer"
                           >
                             <Trash2 className="w-4 h-4" />
                           </button>
