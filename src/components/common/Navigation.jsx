@@ -12,7 +12,12 @@ import {
   User,
   LogOut,
   Settings,
-  BarChart3
+  BarChart3,
+  Package,
+  Users,
+  CreditCard,
+  LineChart,
+  Database
 } from 'lucide-react'
 import { useAuth } from '../../contexts/AuthContext'
 
@@ -35,9 +40,16 @@ const Navigation = ({ currentLang, setCurrentLang, languages }) => {
 
   const authenticatedNavItems = [
     { path: '/dashboard', icon: BarChart3, label: 'Dashboard' },
-    { path: '/invoices', icon: FileText, label: 'Factures' },
-    { path: '/orders', icon: ShoppingCart, label: 'Commandes' },
-    { path: '/deliveries', icon: Truck, label: 'Livraisons' },
+    { path: '/stock', icon: Package, label: 'Stock' },
+    { path: '/suppliers', icon: Users, label: 'Fournisseurs' },
+    { path: '/payments', icon: CreditCard, label: 'Paiements' },
+    { path: '/analytics', icon: LineChart, label: 'Analyses' },
+  ]
+
+  const documentItems = [
+    { path: '/invoices', icon: FileText, label: 'Factures', color: 'text-blue-600' },
+    { path: '/orders', icon: ShoppingCart, label: 'Commandes', color: 'text-green-600' },
+    { path: '/deliveries', icon: Truck, label: 'Livraisons', color: 'text-purple-600' },
   ]
 
   const navItems = isAuthenticated ? authenticatedNavItems : publicNavItems
@@ -83,21 +95,40 @@ const Navigation = ({ currentLang, setCurrentLang, languages }) => {
               )
             })}
 
-            {/* Create Dropdown - Only show when authenticated */}
+            {/* Documents Dropdown - Only show when authenticated */}
             {isAuthenticated && (
               <div className="relative group">
-                <button className="flex items-center space-x-2 px-4 py-2 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-md hover:shadow-lg transition-all">
-                  <Plus className="w-4 h-4" />
-                  <span>Créer</span>
+                <button className="flex items-center space-x-2 px-4 py-2 rounded-md text-gray-600 hover:text-blue-600 hover:bg-gray-50 transition-colors">
+                  <FileText className="w-4 h-4" />
+                  <span>Documents</span>
                 </button>
                 
-                <div className="absolute right-0 mt-2 w-64 bg-white rounded-md shadow-lg border opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200">
+                <div className="absolute left-0 mt-2 w-64 bg-white rounded-md shadow-lg border opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200">
                   <div className="py-2">
+                    <div className="px-4 py-1 text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                      Consulter
+                    </div>
+                    {documentItems.map((item) => (
+                      <Link
+                        key={item.path}
+                        to={item.path}
+                        className="flex items-center space-x-3 px-4 py-2 hover:bg-gray-50 transition-colors"
+                      >
+                        <item.icon className={`w-5 h-5 ${item.color}`} />
+                        <span className="text-gray-700">{item.label}</span>
+                      </Link>
+                    ))}
+                    
+                    <div className="border-t my-1"></div>
+                    
+                    <div className="px-4 py-1 text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                      Créer nouveau
+                    </div>
                     {createItems.map((item) => (
                       <Link
                         key={item.path}
                         to={item.path}
-                        className="flex items-center space-x-3 px-4 py-3 hover:bg-gray-50 transition-colors"
+                        className="flex items-center space-x-3 px-4 py-2 hover:bg-gray-50 transition-colors"
                       >
                         <item.icon className={`w-5 h-5 ${item.color}`} />
                         <span className="text-gray-700">{item.label}</span>
@@ -158,6 +189,14 @@ const Navigation = ({ currentLang, setCurrentLang, languages }) => {
                       >
                         <Settings className="w-4 h-4" />
                         <span>Profile Settings</span>
+                      </Link>
+                      <Link
+                        to="/migration"
+                        className="flex items-center space-x-2 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
+                        onClick={() => setIsUserMenuOpen(false)}
+                      >
+                        <Database className="w-4 h-4" />
+                        <span>Migration Supabase</span>
                       </Link>
                       <button
                         onClick={handleSignOut}
@@ -221,10 +260,25 @@ const Navigation = ({ currentLang, setCurrentLang, languages }) => {
                 )
               })}
               
-              {/* Create Items - Only show when authenticated */}
+              {/* Documents Section - Only show when authenticated */}
               {isAuthenticated && (
                 <div className="border-t pt-2 mt-2">
-                  <div className="px-3 py-2 text-sm font-medium text-gray-500">Créer nouveau:</div>
+                  <div className="px-3 py-2 text-sm font-medium text-gray-500">Documents</div>
+                  
+                  <div className="px-3 py-1 text-xs font-semibold text-gray-500">Consulter</div>
+                  {documentItems.map((item) => (
+                    <Link
+                      key={item.path}
+                      to={item.path}
+                      className="flex items-center space-x-3 px-3 py-2 rounded-md text-base font-medium text-gray-600 hover:text-blue-600 hover:bg-gray-50"
+                      onClick={() => setIsMenuOpen(false)}
+                    >
+                      <item.icon className={`w-5 h-5 ${item.color}`} />
+                      <span>{item.label}</span>
+                    </Link>
+                  ))}
+                  
+                  <div className="px-3 py-1 text-xs font-semibold text-gray-500 mt-2">Créer nouveau</div>
                   {createItems.map((item) => (
                     <Link
                       key={item.path}

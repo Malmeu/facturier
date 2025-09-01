@@ -12,6 +12,14 @@ import OrderCreator from './components/documents/OrderCreator'
 import DeliveryCreator from './components/documents/DeliveryCreator'
 import DocumentList from './components/documents/DocumentList'
 import ProfileSettings from './components/ProfileSettings'
+
+// Nouveaux composants
+import StockManagement from './components/stock/StockManagement'
+import SupplierManagement from './components/stock/SupplierManagement'
+import PaymentManagement from './components/billing/PaymentManagement'
+import AnalyticsDashboard from './components/reports/Dashboard'
+import SupabaseMigration from './components/settings/SupabaseMigration'
+
 import './App.css'
 
 // Language configurations
@@ -180,6 +188,8 @@ function App() {
                 </ProtectedRoute>
               } 
             />
+            
+            {/* Documents */}
             <Route 
               path="/invoice" 
               element={
@@ -261,6 +271,50 @@ function App() {
                 </ProtectedRoute>
               } 
             />
+            
+            {/* Nouveaux modules */}
+            <Route 
+              path="/stock" 
+              element={
+                <ProtectedRoute>
+                  <StockManagement />
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/suppliers" 
+              element={
+                <ProtectedRoute>
+                  <SupplierManagement />
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/payments" 
+              element={
+                <ProtectedRoute>
+                  <PaymentManagement />
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/analytics" 
+              element={
+                <ProtectedRoute>
+                  <AnalyticsDashboard />
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/migration" 
+              element={
+                <ProtectedRoute>
+                  <SupabaseMigration />
+                </ProtectedRoute>
+              } 
+            />
+            
+            {/* Profil */}
             <Route 
               path="/profile" 
               element={
