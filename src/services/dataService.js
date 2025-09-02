@@ -1,4 +1,5 @@
 import { supabase } from '../lib/supabase'
+import { generateUUID, ensureUUID } from '../utils/uuidUtils'
 
 export class DataService {
   // Check if user is authenticated
@@ -537,13 +538,15 @@ export class DataService {
       // Ajouter les métadonnées
       const clientWithMeta = {
         ...client,
-        id: client.id || Date.now().toString(),
+        // Utiliser un UUID valide au lieu d'un timestamp
+        id: ensureUUID(client.id),
         user_id: user.id,
         updated_at: new Date().toISOString(),
         created_at: client.created_at || new Date().toISOString()
       }
 
       // Enregistrer dans Supabase
+      console.log('Tentative d\'enregistrement du client dans Supabase:', clientWithMeta);
       const { data, error } = await supabase
         .from('clients')
         .upsert([clientWithMeta])
@@ -551,6 +554,14 @@ export class DataService {
 
       if (error) {
         console.error('Erreur lors de l\'enregistrement du client dans Supabase:', error)
+        console.error('Code d\'erreur:', error.code)
+        console.error('Message d\'erreur:', error.message)
+        console.error('Détails:', error.details)
+        
+        // Vérifier si la table existe
+        if (error.code === '42P01') {
+          console.error('La table clients n\'existe pas dans Supabase. Veuillez exécuter le script SQL pour créer la table.')
+        }
         
         // Fallback: enregistrer dans localStorage
         const storageKey = this.getUserStorageKey(user.id, 'clients')
@@ -564,6 +575,7 @@ export class DataService {
         }
         
         localStorage.setItem(storageKey, JSON.stringify(existingClients))
+        alert('Le client a été sauvegardé localement mais pas dans Supabase. Vérifiez que la table clients existe.')
         return { success: true, data: clientWithMeta, source: 'localStorage' }
       }
       

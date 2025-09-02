@@ -310,22 +310,50 @@ export class PrintManager {
         </div>
 
         <!-- Items Table -->
-        <table style="width: 100%; border-collapse: collapse; margin: 20px 0;">
+        <table style="width: 100%; border-collapse: collapse; margin: 20px 0; box-shadow: 0 2px 8px rgba(0,0,0,0.1); border-radius: 8px; overflow: hidden;">
           <thead>
             <tr class="document-header">
-              <th style="padding: 12px; text-align: left; color: white;">Description</th>
-              <th style="padding: 12px; text-align: center; color: white;">Qté</th>
-              <th style="padding: 12px; text-align: right; color: white;">P.U. (DZD)</th>
-              <th style="padding: 12px; text-align: right; color: white;">Total (DZD)</th>
+              <th style="padding: 15px; text-align: left; color: white; font-weight: 600;">Article</th>
+              <th style="padding: 15px; text-align: center; color: white; font-weight: 600;">Qté</th>
+              <th style="padding: 15px; text-align: center; color: white; font-weight: 600;">Unité</th>
+              <th style="padding: 15px; text-align: right; color: white; font-weight: 600;">P.U. (DZD)</th>
+              <th style="padding: 15px; text-align: right; color: white; font-weight: 600;">Total (DZD)</th>
             </tr>
           </thead>
           <tbody>
             ${invoice.items.map((item, index) => `
-              <tr style="${index % 2 === 1 ? 'background-color: #f9f9f9;' : ''}">
-                <td style="padding: 10px; border-bottom: 1px solid #eee;">${item.description}</td>
-                <td style="padding: 10px; text-align: center; border-bottom: 1px solid #eee;">${item.quantity}</td>
-                <td style="padding: 10px; text-align: right; border-bottom: 1px solid #eee;">${item.unitPrice.toFixed(2)}</td>
-                <td style="padding: 10px; text-align: right; border-bottom: 1px solid #eee;">${item.total.toFixed(2)}</td>
+              <tr style="${index % 2 === 1 ? 'background-color: #f8fafc;' : 'background-color: white;'} border-bottom: 1px solid #e2e8f0;">
+                <td style="padding: 15px; border-bottom: 1px solid #e2e8f0; vertical-align: top;">
+                  <div style="line-height: 1.4;">
+                    ${item.title ? `<div style="font-weight: 600; color: #1a202c; margin-bottom: 4px; font-size: 14px;">${item.title}</div>` : ''}
+                    ${item.description ? `<div style="color: #4a5568; margin-bottom: 6px;">${item.description}</div>` : ''}
+                    <div style="display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px;">
+                      ${item.type && item.type !== 'standard' ? `
+                        <span style="display: inline-flex; align-items: center; padding: 2px 8px; border-radius: 12px; background-color: #dbeafe; color: #1e40af; font-size: 11px; font-weight: 500;">
+                          ${item.type === 'horaire' ? '⏰ Horaire' : 
+                            item.type === 'forfait' ? '💼 Forfait' :
+                            item.type === 'contrat' ? '📄 Contrat' :
+                            item.type === 'rendez-vous' ? '📅 RDV' :
+                            item.type === 'personnalise' ? '✏️ Personnalisé' : item.type}
+                        </span>
+                      ` : ''}
+                      ${item.period ? `
+                        <span style="display: inline-flex; align-items: center; padding: 2px 8px; border-radius: 12px; background-color: #dcfce7; color: #166534; font-size: 11px; font-weight: 500;">
+                          📅 ${item.period}
+                        </span>
+                      ` : ''}
+                      ${item.reference ? `
+                        <span style="display: inline-flex; align-items: center; padding: 2px 8px; border-radius: 12px; background-color: #f3e8ff; color: #7c3aed; font-size: 11px; font-weight: 500;">
+                          📋 ${item.reference}
+                        </span>
+                      ` : ''}
+                    </div>
+                  </div>
+                </td>
+                <td style="padding: 15px; text-align: center; border-bottom: 1px solid #e2e8f0; font-weight: 500; color: #2d3748;">${item.quantity}</td>
+                <td style="padding: 15px; text-align: center; border-bottom: 1px solid #e2e8f0; color: #718096; font-style: italic;">${item.unit || 'unité'}</td>
+                <td style="padding: 15px; text-align: right; border-bottom: 1px solid #e2e8f0; font-weight: 500; color: #2d3748;">${item.unitPrice.toFixed(2)}</td>
+                <td style="padding: 15px; text-align: right; border-bottom: 1px solid #e2e8f0; font-weight: 700; color: #1a202c; font-size: 14px;">${item.total.toFixed(2)}</td>
               </tr>
             `).join('')}
           </tbody>
