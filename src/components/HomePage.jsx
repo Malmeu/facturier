@@ -141,59 +141,65 @@ const HomePage = ({ currentLang, languages }) => {
   ]
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100 relative overflow-hidden">
+      {/* Background animated elements */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none">
+        <div className="absolute top-1/4 left-1/4 w-64 h-64 bg-gradient-to-r from-blue-400/20 to-purple-400/20 rounded-full blur-3xl animate-float"></div>
+        <div className="absolute top-3/4 right-1/4 w-96 h-96 bg-gradient-to-r from-purple-400/20 to-pink-400/20 rounded-full blur-3xl animate-float" style={{animationDelay: '2s'}}></div>
+        <div className="absolute top-1/2 left-1/2 w-48 h-48 bg-gradient-to-r from-indigo-400/20 to-blue-400/20 rounded-full blur-3xl animate-float" style={{animationDelay: '4s'}}></div>
+      </div>
 
-      {/* Hero Section */}
+      {/* Hero Section avec glassmorphism */}
       <section className="relative overflow-hidden">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-20 pb-16">
           <div className="text-center">
-            <div className="animate-fadeInUp">
-              <div className="inline-flex items-center bg-gradient-to-r from-blue-100 to-purple-100 rounded-full px-6 py-2 mb-6">
-                <Zap className="w-4 h-4 text-blue-600 mr-2" />
-                <span className="text-sm font-medium text-blue-800">Nouvelle version 2024 - Fonctionnalités avancées</span>
+            <div className="animate-fade-in-up">
+              <div className="inline-flex items-center bg-white/30 backdrop-blur-sm border border-white/20 rounded-full px-6 py-3 mb-8 shadow-lg hover:bg-white/40 transition-all duration-300">
+                <Zap className="w-5 h-5 text-blue-600 mr-3 animate-pulse" />
+                <span className="text-sm font-semibold text-blue-800">Nouvelle version 2024 - Fonctionnalités avancées</span>
               </div>
-              <h1 className="text-5xl md:text-7xl font-bold mb-6">
-                <span className="bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 bg-clip-text text-transparent">
+              <h1 className="text-6xl md:text-8xl font-bold mb-8 animate-scale-in">
+                <span className="bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 bg-clip-text text-transparent drop-shadow-lg">
                   FacturePro
                 </span>
               </h1>
-              <p className="text-2xl md:text-3xl text-gray-700 mb-6 max-w-4xl mx-auto font-light">
-                Solution complète de <span className="font-semibold text-blue-600">facturation</span> et <span className="font-semibold text-purple-600">gestion commerciale</span>
+              <p className="text-2xl md:text-4xl text-gray-700 mb-8 max-w-4xl mx-auto font-light animate-fade-in-up" style={{animationDelay: '200ms'}}>
+                Solution complète de <span className="font-bold text-blue-600 bg-blue-50/50 px-2 py-1 rounded-lg">facturation</span> et <span className="font-bold text-purple-600 bg-purple-50/50 px-2 py-1 rounded-lg">gestion commerciale</span>
               </p>
-              <p className="text-xl text-gray-600 mb-12 max-w-3xl mx-auto">
+              <p className="text-xl text-gray-600 mb-12 max-w-3xl mx-auto font-medium animate-fade-in-up" style={{animationDelay: '400ms'}}>
                 Factures • Commandes • Livraisons • Stock • Fournisseurs • Analytics
               </p>
             </div>
             
-            <div className="animate-fadeInUp flex flex-col sm:flex-row gap-4 justify-center items-center">
+            <div className="animate-fade-in-up flex flex-col sm:flex-row gap-6 justify-center items-center" style={{animationDelay: '600ms'}}>
               {isAuthenticated ? (
                 <>
                   <Link 
                     to="/dashboard"
-                    className="gradient-primary text-white px-8 py-4 rounded-lg font-semibold text-lg hover:shadow-lg transform hover:scale-105 flex items-center gap-2"
+                    className="group bg-gradient-to-r from-blue-600 to-purple-600 text-white px-10 py-4 rounded-2xl font-bold text-lg hover:shadow-2xl hover:shadow-blue-500/25 transform hover:scale-105 transition-all duration-300 flex items-center gap-3"
                   >
-                    Go to Dashboard
-                    <ArrowRight className="w-5 h-5" />
+                    Tableau de Bord
+                    <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform duration-300" />
                   </Link>
                   <Link 
                     to="/invoice"
-                    className="border-2 border-gray-300 text-gray-700 px-8 py-4 rounded-lg font-semibold text-lg hover:border-blue-500 hover:text-blue-600"
+                    className="group bg-white/70 backdrop-blur-sm border-2 border-white/30 text-gray-700 px-10 py-4 rounded-2xl font-bold text-lg hover:bg-white/90 hover:border-blue-500/50 hover:text-blue-600 hover:shadow-xl transition-all duration-300"
                   >
-                    Create Invoice
+                    Créer Facture
                   </Link>
                 </>
               ) : (
                 <>
                   <Link 
                     to="/register"
-                    className="gradient-primary text-white px-8 py-4 rounded-lg font-semibold text-lg hover:shadow-lg transform hover:scale-105 flex items-center gap-2"
+                    className="group bg-gradient-to-r from-blue-600 to-purple-600 text-white px-10 py-4 rounded-2xl font-bold text-lg hover:shadow-2xl hover:shadow-blue-500/25 transform hover:scale-105 transition-all duration-300 flex items-center gap-3"
                   >
                     {currentTexts.getStarted}
-                    <ArrowRight className="w-5 h-5" />
+                    <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform duration-300" />
                   </Link>
                   <a 
                     href="#features"
-                    className="border-2 border-gray-300 text-gray-700 px-8 py-4 rounded-lg font-semibold text-lg hover:border-blue-500 hover:text-blue-600"
+                    className="group bg-white/70 backdrop-blur-sm border-2 border-white/30 text-gray-700 px-10 py-4 rounded-2xl font-bold text-lg hover:bg-white/90 hover:border-blue-500/50 hover:text-blue-600 hover:shadow-xl transition-all duration-300"
                   >
                     {currentTexts.learnMore}
                   </a>

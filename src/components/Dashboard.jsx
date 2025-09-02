@@ -9,7 +9,9 @@ import {
   DollarSign,
   Calendar,
   Users,
-  BarChart3
+  BarChart3,
+  Trash2,
+  AlertTriangle
 } from 'lucide-react'
 import { useAuth } from '../contexts/AuthContext'
 import { DataService } from '../services/dataService'
@@ -22,6 +24,7 @@ const Dashboard = () => {
     deliveries: 0,
     totalAmount: 0
   })
+  const [showDeleteModal, setShowDeleteModal] = useState(false)
 
   useEffect(() => {
     // Load user-specific statistics
@@ -130,26 +133,54 @@ const Dashboard = () => {
     }
   ]
 
+  const handleDeleteLocalData = () => {
+    if (!user) return
+    
+    const userId = user.id
+    const dataTypes = [
+      'products', 'suppliers', 'stock_movements', 'inventory_counts', 'purchase_orders', 'goods_receipts',
+      'invoices', 'orders', 'deliveries', 'company_logo', 'company_logo_info', 'app_settings'
+    ]
+    
+    dataTypes.forEach(type => {
+      const key = `${userId}_${type}`
+      localStorage.removeItem(key)
+    })
+    
+    // Rafraîchir la page pour voir les changements
+    window.location.reload()
+  }
+
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <div className="bg-white shadow">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100">
+      {/* Header avec effet glassmorphism */}
+      <div className="sticky top-0 z-40 backdrop-blur-xl bg-white/80 border-b border-white/20 shadow-lg shadow-black/5">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="py-6">
             <div className="flex items-center justify-between">
-              <div>
-                <h1 className="text-2xl font-bold text-gray-900">
-                  Welcome back, {user?.user_metadata?.full_name || 'User'}!
+              <div className="animate-fade-in-up">
+                <h1 className="text-3xl font-bold bg-gradient-to-r from-gray-900 via-blue-800 to-indigo-600 bg-clip-text text-transparent">
+                  Bienvenue, {user?.user_metadata?.full_name || 'Utilisateur'} !
                 </h1>
-                <p className="text-gray-600">
+                <p className="text-gray-600 mt-1 font-medium">
                   {user?.user_metadata?.company_name && (
-                    <>Managing documents for {user.user_metadata.company_name}</>
+                    <>Gestion des documents pour {user.user_metadata.company_name}</>
                   )}
                 </p>
               </div>
-              <div className="flex items-center space-x-2 text-sm text-gray-500">
-                <Calendar className="h-4 w-4" />
-                <span>{new Date().toLocaleDateString('fr-FR')}</span>
+              <div className="flex items-center space-x-4 animate-fade-in-down">
+                <button
+                  onClick={() => setShowDeleteModal(true)}
+                  className="group flex items-center space-x-2 px-4 py-2 bg-gradient-to-r from-red-500 to-red-600 text-white rounded-xl hover:from-red-600 hover:to-red-700 transition-all duration-300 text-sm font-medium shadow-lg hover:shadow-red-500/25 hover:scale-105"
+                  title="Supprimer toutes les données locales (test)"
+                >
+                  <Trash2 className="h-4 w-4 group-hover:rotate-12 transition-transform duration-300" />
+                  <span>Vider Cache</span>
+                </button>
+                <div className="flex items-center space-x-2 text-sm text-gray-600 bg-white/60 backdrop-blur-sm px-3 py-2 rounded-lg border border-white/30">
+                  <Calendar className="h-4 w-4 text-blue-500" />
+                  <span className="font-medium">{new Date().toLocaleDateString('fr-FR')}</span>
+                </div>
               </div>
             </div>
           </div>
@@ -157,51 +188,56 @@ const Dashboard = () => {
       </div>
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Statistics */}
+        {/* Statistics avec animations */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
           {statCards.map((stat, index) => (
-            <div key={index} className="bg-white rounded-lg shadow p-6">
+            <div 
+              key={index} 
+              className="group bg-white/70 backdrop-blur-sm rounded-2xl shadow-lg hover:shadow-xl border border-white/50 p-6 transition-all duration-500 hover:scale-105 hover:bg-white/80 animate-fade-in-up"
+              style={{ animationDelay: `${index * 100}ms` }}
+            >
               <div className="flex items-center">
-                <div className={`${stat.bg} p-3 rounded-lg`}>
-                  <stat.icon className={`h-6 w-6 ${stat.color}`} />
+                <div className={`${stat.bg} p-3 rounded-xl group-hover:scale-110 transition-transform duration-300 shadow-lg`}>
+                  <stat.icon className={`h-6 w-6 ${stat.color} group-hover:rotate-12 transition-transform duration-300`} />
                 </div>
                 <div className="ml-4 flex-1">
-                  <p className="text-sm font-medium text-gray-600">{stat.title}</p>
-                  <p className="text-2xl font-bold text-gray-900">{stat.value}</p>
+                  <p className="text-sm font-medium text-gray-600 group-hover:text-gray-700 transition-colors">{stat.title}</p>
+                  <p className="text-2xl font-bold text-gray-900 group-hover:text-indigo-600 transition-colors">{stat.value}</p>
                 </div>
               </div>
               <div className="mt-4 flex items-center">
-                <TrendingUp className="h-4 w-4 text-green-500 mr-1" />
+                <TrendingUp className="h-4 w-4 text-green-500 mr-1 group-hover:scale-110 transition-transform duration-300" />
                 <span className="text-sm text-green-600 font-medium">{stat.change}</span>
-                <span className="text-sm text-gray-500 ml-1">vs last month</span>
+                <span className="text-sm text-gray-500 ml-1">vs mois dernier</span>
               </div>
             </div>
           ))}
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* Quick Actions */}
+          {/* Quick Actions avec glassmorphism */}
           <div className="lg:col-span-2">
-            <div className="bg-white rounded-lg shadow">
+            <div className="bg-white/70 backdrop-blur-sm rounded-2xl shadow-xl border border-white/50 animate-fade-in-up" style={{ animationDelay: '400ms' }}>
               <div className="p-6">
-                <h2 className="text-lg font-semibold text-gray-900 mb-6">Quick Actions</h2>
+                <h2 className="text-xl font-bold bg-gradient-to-r from-gray-900 to-indigo-600 bg-clip-text text-transparent mb-6">Actions Rapides</h2>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   {quickActions.map((action, index) => (
                     <Link
                       key={index}
                       to={action.link}
-                      className="group block p-6 border border-gray-200 rounded-lg hover:border-indigo-300 hover:shadow-md transition-all duration-200"
+                      className="group block p-6 bg-gradient-to-br from-white/60 to-white/40 backdrop-blur-sm border border-white/30 rounded-xl hover:from-white/80 hover:to-white/60 hover:border-indigo-300/50 hover:shadow-xl transition-all duration-300 hover:scale-105 hover:-translate-y-1"
+                      style={{ animationDelay: `${500 + index * 100}ms` }}
                     >
                       <div className="flex items-center mb-3">
-                        <div className={`${action.iconBg} p-2 rounded-lg group-hover:scale-110 transition-transform duration-200`}>
+                        <div className={`${action.iconBg} p-3 rounded-xl group-hover:scale-110 group-hover:rotate-6 transition-all duration-300 shadow-lg`}>
                           <action.icon className={`h-6 w-6 ${action.iconColor}`} />
                         </div>
-                        <Plus className="h-4 w-4 text-gray-400 ml-auto" />
+                        <Plus className="h-4 w-4 text-gray-400 ml-auto group-hover:text-indigo-500 group-hover:rotate-90 transition-all duration-300" />
                       </div>
-                      <h3 className="font-semibold text-gray-900 group-hover:text-indigo-600 transition-colors">
+                      <h3 className="font-semibold text-gray-900 group-hover:text-indigo-600 transition-colors mb-2">
                         {action.title}
                       </h3>
-                      <p className="text-sm text-gray-600 mt-1">
+                      <p className="text-sm text-gray-600 group-hover:text-gray-700 transition-colors">
                         {action.description}
                       </p>
                     </Link>
@@ -211,77 +247,110 @@ const Dashboard = () => {
             </div>
           </div>
 
-          {/* Recent Activity */}
-          <div className="bg-white rounded-lg shadow">
+          {/* Recent Activity avec glassmorphism */}
+          <div className="bg-white/70 backdrop-blur-sm rounded-2xl shadow-xl border border-white/50 animate-fade-in-up" style={{ animationDelay: '600ms' }}>
             <div className="p-6">
-              <h2 className="text-lg font-semibold text-gray-900 mb-6">Recent Activity</h2>
+              <h2 className="text-xl font-bold bg-gradient-to-r from-gray-900 to-indigo-600 bg-clip-text text-transparent mb-6">Activité Récente</h2>
               <div className="space-y-4">
-                <div className="flex items-center space-x-3 p-3 bg-gray-50 rounded-lg">
-                  <div className="bg-blue-100 p-2 rounded-lg">
-                    <FileText className="h-4 w-4 text-blue-600" />
+                <div className="flex items-center space-x-3 p-4 bg-gradient-to-r from-blue-50/80 to-blue-100/60 backdrop-blur-sm rounded-xl border border-blue-200/30 hover:scale-105 transition-all duration-300">
+                  <div className="bg-blue-500/20 backdrop-blur-sm p-3 rounded-xl border border-blue-300/30">
+                    <FileText className="h-5 w-5 text-blue-600" />
                   </div>
                   <div className="flex-1">
-                    <p className="text-sm font-medium text-gray-900">Invoice created</p>
-                    <p className="text-xs text-gray-500">2 hours ago</p>
+                    <p className="text-sm font-semibold text-gray-900">Facture créée</p>
+                    <p className="text-xs text-gray-600">Il y a 2 heures</p>
                   </div>
                 </div>
-                <div className="flex items-center space-x-3 p-3 bg-gray-50 rounded-lg">
-                  <div className="bg-green-100 p-2 rounded-lg">
-                    <ShoppingCart className="h-4 w-4 text-green-600" />
+                <div className="flex items-center space-x-3 p-4 bg-gradient-to-r from-green-50/80 to-green-100/60 backdrop-blur-sm rounded-xl border border-green-200/30 hover:scale-105 transition-all duration-300">
+                  <div className="bg-green-500/20 backdrop-blur-sm p-3 rounded-xl border border-green-300/30">
+                    <ShoppingCart className="h-5 w-5 text-green-600" />
                   </div>
                   <div className="flex-1">
-                    <p className="text-sm font-medium text-gray-900">Order processed</p>
-                    <p className="text-xs text-gray-500">5 hours ago</p>
+                    <p className="text-sm font-semibold text-gray-900">Commande traitée</p>
+                    <p className="text-xs text-gray-600">Il y a 5 heures</p>
                   </div>
                 </div>
-                <div className="flex items-center space-x-3 p-3 bg-gray-50 rounded-lg">
-                  <div className="bg-purple-100 p-2 rounded-lg">
-                    <Truck className="h-4 w-4 text-purple-600" />
+                <div className="flex items-center space-x-3 p-4 bg-gradient-to-r from-purple-50/80 to-purple-100/60 backdrop-blur-sm rounded-xl border border-purple-200/30 hover:scale-105 transition-all duration-300">
+                  <div className="bg-purple-500/20 backdrop-blur-sm p-3 rounded-xl border border-purple-300/30">
+                    <Truck className="h-5 w-5 text-purple-600" />
                   </div>
                   <div className="flex-1">
-                    <p className="text-sm font-medium text-gray-900">Delivery completed</p>
-                    <p className="text-xs text-gray-500">1 day ago</p>
+                    <p className="text-sm font-semibold text-gray-900">Livraison terminée</p>
+                    <p className="text-xs text-gray-600">Il y a 1 jour</p>
                   </div>
                 </div>
               </div>
               
               <Link 
                 to="/documents"
-                className="block mt-6 text-center text-sm text-indigo-600 hover:text-indigo-500 font-medium"
+                className="block mt-6 text-center text-sm bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent hover:from-indigo-700 hover:to-purple-700 font-semibold transition-all duration-300 hover:scale-105"
               >
-                View all documents →
+                Voir tous les documents →
               </Link>
             </div>
           </div>
         </div>
 
-        {/* Bottom Section */}
-        <div className="mt-8 bg-gradient-to-r from-indigo-500 to-purple-600 rounded-lg p-6 text-white">
+        {/* Bottom Section avec glassmorphism */}
+        <div className="mt-8 bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-500 rounded-2xl p-8 text-white shadow-2xl animate-fade-in-up" style={{ animationDelay: '800ms' }}>
           <div className="flex items-center justify-between">
-            <div>
-              <h3 className="text-lg font-semibold mb-2">
-                Ready to boost your productivity?
+            <div className="flex-1">
+              <h3 className="text-2xl font-bold mb-3 bg-gradient-to-r from-white to-blue-100 bg-clip-text text-transparent">
+                Prêt à booster votre productivité ?
               </h3>
-              <p className="text-indigo-100">
-                Explore our advanced features and templates to streamline your billing process.
+              <p className="text-white/90 text-lg">
+                Explorez nos fonctionnalités avancées et modèles pour optimiser votre processus de facturation.
               </p>
             </div>
-            <div className="flex space-x-3">
+            <div className="flex space-x-4 ml-8">
               <Link
                 to="/templates"
-                className="bg-white text-indigo-600 px-4 py-2 rounded-md font-medium hover:bg-gray-100 transition-colors"
+                className="group bg-white/20 backdrop-blur-sm border border-white/30 text-white px-6 py-3 rounded-xl font-semibold hover:bg-white/30 hover:scale-105 transition-all duration-300 shadow-lg"
               >
-                Explore Templates
+                <span className="group-hover:text-indigo-100 transition-colors">Explorer Modèles</span>
               </Link>
               <Link
                 to="/settings"
-                className="bg-indigo-600 border border-indigo-400 text-white px-4 py-2 rounded-md font-medium hover:bg-indigo-700 transition-colors"
+                className="group bg-white text-indigo-600 px-6 py-3 rounded-xl font-semibold hover:bg-blue-50 hover:scale-105 transition-all duration-300 shadow-lg"
               >
-                Settings
+                <span className="group-hover:text-indigo-700 transition-colors">Paramètres</span>
               </Link>
             </div>
           </div>
         </div>
+
+        {/* Modal de confirmation suppression */}
+        {showDeleteModal && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div className="bg-white rounded-lg p-6 max-w-md mx-4">
+              <div className="flex items-center mb-4">
+                <AlertTriangle className="h-6 w-6 text-red-500 mr-2" />
+                <h3 className="text-lg font-semibold text-gray-900">Supprimer les données locales</h3>
+              </div>
+              <p className="text-gray-600 mb-6">
+                Êtes-vous sûr de vouloir supprimer toutes les données stockées localement ? 
+                Cette action est irréversible pour les données locales uniquement.
+              </p>
+              <div className="flex space-x-3">
+                <button
+                  onClick={() => setShowDeleteModal(false)}
+                  className="flex-1 px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50"
+                >
+                  Annuler
+                </button>
+                <button
+                  onClick={() => {
+                    handleDeleteLocalData()
+                    setShowDeleteModal(false)
+                  }}
+                  className="flex-1 px-4 py-2 bg-red-500 text-white rounded-md hover:bg-red-600"
+                >
+                  Supprimer
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   )

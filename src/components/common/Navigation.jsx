@@ -61,77 +61,89 @@ const Navigation = ({ currentLang, setCurrentLang, languages }) => {
   ]
 
   return (
-    <nav className="bg-white/90 backdrop-blur-md shadow-lg sticky top-0 z-50 border-b border-gray-200">
+    <nav className="bg-white/95 backdrop-blur-xl shadow-sm sticky top-0 z-50 border-b border-gray-100">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-16">
-          {/* Logo */}
-          <Link to="/" className="flex items-center">
-            <div className="w-10 h-10 bg-gradient-to-r from-blue-600 to-purple-600 rounded-lg flex items-center justify-center">
-              <FileText className="w-6 h-6 text-white" />
+          {/* Logo Section */}
+          <Link to="/" className="flex items-center group">
+            <div className="w-10 h-10 bg-gradient-to-r from-blue-600 to-purple-600 rounded-xl flex items-center justify-center group-hover:scale-105 transition-transform duration-200 shadow-lg">
+              <FileText className="w-5 h-5 text-white" />
             </div>
             <div className="ml-3">
-              <span className="text-xl font-bold text-gray-900">FacturePro</span>
-              <div className="text-xs text-gray-500">DZ Billing Solution</div>
+              <span className="text-xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">FacturePro</span>
+              <div className="text-xs text-gray-500 font-medium">DZ Billing Solution</div>
             </div>
           </Link>
 
-          {/* Desktop Navigation */}
-          <div className="hidden md:flex items-center space-x-8">
+          {/* Navigation centrale moderne */}
+          <div className="hidden lg:flex items-center space-x-1 bg-gray-50/80 backdrop-blur-sm rounded-2xl p-1 border border-gray-200/50">
             {navItems.map((item) => {
               const isActive = location.pathname === item.path
               return (
                 <Link
                   key={item.path}
                   to={item.path}
-                  className={`flex items-center space-x-2 px-3 py-2 rounded-md text-sm font-medium transition-colors ${
+                  className={`flex items-center space-x-2 px-4 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 ${
                     isActive
-                      ? 'bg-blue-100 text-blue-700'
-                      : 'text-gray-600 hover:text-blue-600 hover:bg-gray-50'
+                      ? 'bg-white text-blue-600 shadow-sm border border-blue-100'
+                      : 'text-gray-600 hover:text-blue-600 hover:bg-white/60'
                   }`}
                 >
-                  <item.icon className="w-4 h-4" />
+                  <item.icon className={`w-4 h-4 ${isActive ? 'text-blue-600' : ''}`} />
                   <span>{item.label}</span>
                 </Link>
               )
             })}
 
-            {/* Documents Dropdown - Only show when authenticated */}
+            {/* Documents avec icône moderne */}
             {isAuthenticated && (
               <div className="relative group">
-                <button className="flex items-center space-x-2 px-4 py-2 rounded-md text-gray-600 hover:text-blue-600 hover:bg-gray-50 transition-colors">
+                <button className="flex items-center space-x-2 px-4 py-2.5 rounded-xl text-sm font-medium text-gray-600 hover:text-blue-600 hover:bg-white/60 transition-all duration-200">
                   <FileText className="w-4 h-4" />
                   <span>Documents</span>
                 </button>
                 
-                <div className="absolute left-0 mt-2 w-64 bg-white rounded-md shadow-lg border opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200">
-                  <div className="py-2">
-                    <div className="px-4 py-1 text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                <div className="absolute left-0 mt-3 w-72 bg-white/95 backdrop-blur-xl rounded-2xl shadow-xl border border-gray-100 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-300 transform translate-y-2 group-hover:translate-y-0">
+                  <div className="p-3">
+                    <div className="px-3 py-2 text-xs font-bold text-gray-500 uppercase tracking-wider">
                       Consulter
                     </div>
                     {documentItems.map((item) => (
                       <Link
                         key={item.path}
                         to={item.path}
-                        className="flex items-center space-x-3 px-4 py-2 hover:bg-gray-50 transition-colors"
+                        className="flex items-center space-x-3 px-3 py-2.5 hover:bg-gray-50 rounded-xl transition-all duration-200 group/item"
                       >
-                        <item.icon className={`w-5 h-5 ${item.color}`} />
-                        <span className="text-gray-700">{item.label}</span>
+                        <div className={`w-8 h-8 rounded-lg flex items-center justify-center bg-gradient-to-r ${
+                          item.color === 'text-blue-600' ? 'from-blue-50 to-blue-100' :
+                          item.color === 'text-green-600' ? 'from-green-50 to-green-100' :
+                          'from-purple-50 to-purple-100'
+                        }`}>
+                          <item.icon className={`w-4 h-4 ${item.color} group-hover/item:scale-110 transition-transform duration-200`} />
+                        </div>
+                        <span className="text-gray-700 font-medium">{item.label}</span>
                       </Link>
                     ))}
                     
-                    <div className="border-t my-1"></div>
+                    <div className="border-t my-2 border-gray-100"></div>
                     
-                    <div className="px-4 py-1 text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                    <div className="px-3 py-2 text-xs font-bold text-gray-500 uppercase tracking-wider">
                       Créer nouveau
                     </div>
                     {createItems.map((item) => (
                       <Link
                         key={item.path}
                         to={item.path}
-                        className="flex items-center space-x-3 px-4 py-2 hover:bg-gray-50 transition-colors"
+                        className="flex items-center space-x-3 px-3 py-2.5 hover:bg-gray-50 rounded-xl transition-all duration-200 group/item"
                       >
-                        <item.icon className={`w-5 h-5 ${item.color}`} />
-                        <span className="text-gray-700">{item.label}</span>
+                        <div className={`w-8 h-8 rounded-lg flex items-center justify-center bg-gradient-to-r ${
+                          item.color === 'text-blue-600' ? 'from-blue-50 to-blue-100' :
+                          item.color === 'text-green-600' ? 'from-green-50 to-green-100' :
+                          'from-purple-50 to-purple-100'
+                        }`}>
+                          <item.icon className={`w-4 h-4 ${item.color} group-hover/item:scale-110 transition-transform duration-200`} />
+                        </div>
+                        <span className="text-gray-700 font-medium">{item.label}</span>
                       </Link>
                     ))}
                   </div>
@@ -140,71 +152,82 @@ const Navigation = ({ currentLang, setCurrentLang, languages }) => {
             )}
           </div>
 
-          {/* Language Selector & Auth Section */}
-          <div className="flex items-center space-x-4">
-            <select 
-              value={currentLang} 
-              onChange={(e) => setCurrentLang(e.target.value)}
-              className="border border-gray-300 rounded-md px-2 py-1 text-sm bg-white"
-            >
-              <option value="fr">🇫🇷 FR</option>
-              <option value="ar">🇩🇿 AR</option>
-              <option value="en">🇬🇧 EN</option>
-            </select>
+          {/* Section droite moderne */}
+          <div className="flex items-center space-x-3">
+            {/* Sélecteur de langue moderne */}
+            <div className="relative">
+              <select 
+                value={currentLang} 
+                onChange={(e) => setCurrentLang(e.target.value)}
+                className="appearance-none bg-gray-50/80 backdrop-blur-sm border border-gray-200/50 rounded-xl px-3 py-2 text-sm font-medium text-gray-700 hover:bg-white/80 transition-all duration-200 cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+              >
+                <option value="fr">🇫🇷 FR</option>
+                <option value="ar">🇩🇿 AR</option>
+                <option value="en">🇬🇧 EN</option>
+              </select>
+            </div>
             
-            {/* Authentication Section */}
+            {/* Section authentification moderne */}
             {isAuthenticated ? (
               <div className="relative">
                 <button
                   onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
-                  className="flex items-center space-x-2 px-3 py-2 rounded-md text-gray-600 hover:text-gray-900 hover:bg-gray-50 transition-colors"
+                  className="flex items-center space-x-3 px-3 py-2 rounded-xl bg-gray-50/80 backdrop-blur-sm border border-gray-200/50 hover:bg-white/80 transition-all duration-200 group"
                 >
-                  <div className="w-8 h-8 bg-gradient-to-r from-blue-600 to-purple-600 rounded-full flex items-center justify-center">
+                  <div className="w-8 h-8 bg-gradient-to-r from-blue-600 to-purple-600 rounded-xl flex items-center justify-center group-hover:scale-105 transition-transform duration-200">
                     <User className="w-4 h-4 text-white" />
                   </div>
-                  <span className="hidden md:block text-sm font-medium">
-                    {user?.user_metadata?.full_name || 'User'}
+                  <span className="hidden md:block text-sm font-medium text-gray-700">
+                    {user?.user_metadata?.full_name || 'malmeu'}
                   </span>
                 </button>
 
-                {/* User Dropdown */}
+                {/* Menu utilisateur moderne */}
                 {isUserMenuOpen && (
-                  <div className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg border">
-                    <div className="py-1">
-                      <div className="px-4 py-2 border-b">
-                        <p className="text-sm font-medium text-gray-900">
+                  <div className="absolute right-0 mt-3 w-64 bg-white/95 backdrop-blur-xl rounded-2xl shadow-xl border border-gray-100 transform transition-all duration-300">
+                    <div className="p-3">
+                      <div className="px-3 py-3 border-b border-gray-100">
+                        <p className="text-sm font-bold text-gray-900">
                           {user?.user_metadata?.full_name}
                         </p>
-                        <p className="text-xs text-gray-500">{user?.email}</p>
+                        <p className="text-xs text-gray-500 mt-1">{user?.email}</p>
                         {user?.user_metadata?.company_name && (
-                          <p className="text-xs text-gray-500">
+                          <p className="text-xs text-blue-600 font-medium mt-1">
                             {user.user_metadata.company_name}
                           </p>
                         )}
                       </div>
-                      <Link
-                        to="/profile"
-                        className="flex items-center space-x-2 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
-                        onClick={() => setIsUserMenuOpen(false)}
-                      >
-                        <Settings className="w-4 h-4" />
-                        <span>Profile Settings</span>
-                      </Link>
-                      <Link
-                        to="/migration"
-                        className="flex items-center space-x-2 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
-                        onClick={() => setIsUserMenuOpen(false)}
-                      >
-                        <Database className="w-4 h-4" />
-                        <span>Migration Supabase</span>
-                      </Link>
-                      <button
-                        onClick={handleSignOut}
-                        className="flex items-center space-x-2 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 w-full text-left"
-                      >
-                        <LogOut className="w-4 h-4" />
-                        <span>Sign out</span>
-                      </button>
+                      <div className="py-2">
+                        <Link
+                          to="/profile"
+                          className="flex items-center space-x-3 px-3 py-2.5 text-sm text-gray-700 hover:bg-gray-50 rounded-xl transition-all duration-200 group/item"
+                          onClick={() => setIsUserMenuOpen(false)}
+                        >
+                          <div className="w-8 h-8 bg-gray-100 rounded-lg flex items-center justify-center group-hover/item:bg-blue-50 transition-colors duration-200">
+                            <Settings className="w-4 h-4 text-gray-600 group-hover/item:text-blue-600" />
+                          </div>
+                          <span className="font-medium">Paramètres</span>
+                        </Link>
+                        <Link
+                          to="/migration"
+                          className="flex items-center space-x-3 px-3 py-2.5 text-sm text-gray-700 hover:bg-gray-50 rounded-xl transition-all duration-200 group/item"
+                          onClick={() => setIsUserMenuOpen(false)}
+                        >
+                          <div className="w-8 h-8 bg-gray-100 rounded-lg flex items-center justify-center group-hover/item:bg-green-50 transition-colors duration-200">
+                            <Database className="w-4 h-4 text-gray-600 group-hover/item:text-green-600" />
+                          </div>
+                          <span className="font-medium">Migration</span>
+                        </Link>
+                        <button
+                          onClick={handleSignOut}
+                          className="flex items-center space-x-3 px-3 py-2.5 text-sm text-gray-700 hover:bg-red-50 rounded-xl transition-all duration-200 w-full text-left group/item"
+                        >
+                          <div className="w-8 h-8 bg-gray-100 rounded-lg flex items-center justify-center group-hover/item:bg-red-50 transition-colors duration-200">
+                            <LogOut className="w-4 h-4 text-gray-600 group-hover/item:text-red-600" />
+                          </div>
+                          <span className="font-medium group-hover/item:text-red-600">Déconnexion</span>
+                        </button>
+                      </div>
                     </div>
                   </div>
                 )}
@@ -213,25 +236,26 @@ const Navigation = ({ currentLang, setCurrentLang, languages }) => {
               <div className="hidden md:flex items-center space-x-3">
                 <Link
                   to="/login"
-                  className="text-gray-600 hover:text-gray-900 text-sm font-medium"
+                  className="text-gray-600 hover:text-gray-900 text-sm font-medium px-4 py-2 rounded-xl hover:bg-gray-50 transition-all duration-200"
                 >
-                  Sign in
+                  Connexion
                 </Link>
                 <Link
                   to="/register"
-                  className="bg-gradient-to-r from-blue-600 to-purple-600 text-white px-4 py-2 rounded-md text-sm font-medium hover:shadow-lg transition-all"
+                  className="bg-gradient-to-r from-blue-600 to-purple-600 text-white px-6 py-2.5 rounded-xl text-sm font-bold hover:shadow-lg hover:scale-105 transition-all duration-200"
                 >
-                  Get Started
+                  Commencer
                 </Link>
               </div>
             )}
             
-            <div className="md:hidden">
+            {/* Menu mobile */}
+            <div className="lg:hidden">
               <button
                 onClick={() => setIsMenuOpen(!isMenuOpen)}
-                className="text-gray-600 hover:text-gray-900 focus:outline-none"
+                className="text-gray-600 hover:text-gray-900 focus:outline-none p-2 rounded-xl hover:bg-gray-50 transition-all duration-200"
               >
-                {isMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
+                {isMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
               </button>
             </div>
           </div>

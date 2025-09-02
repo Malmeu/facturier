@@ -53,7 +53,8 @@ export const SupabaseService = {
     try {
       // Ajouter l'ID utilisateur si nécessaire
       if (options.addUserId) {
-        data.user_id = supabase.auth.user()?.id;
+        const { data: { user } } = await supabase.auth.getUser();
+        data.user_id = user?.id;
       }
       
       const { data: insertedData, error } = await supabase
@@ -78,7 +79,8 @@ export const SupabaseService = {
     try {
       // Vérifier si l'utilisateur est propriétaire de la donnée si nécessaire
       if (options.checkOwnership) {
-        const userId = supabase.auth.user()?.id;
+        const { data: { user } } = await supabase.auth.getUser();
+        const userId = user?.id;
         const { data: existingData, error: fetchError } = await supabase
           .from(table)
           .select('user_id')
@@ -121,7 +123,8 @@ export const SupabaseService = {
     try {
       // Vérifier si l'utilisateur est propriétaire de la donnée si nécessaire
       if (options.checkOwnership) {
-        const userId = supabase.auth.user()?.id;
+        const { data: { user } } = await supabase.auth.getUser();
+        const userId = user?.id;
         const { data: existingData, error: fetchError } = await supabase
           .from(table)
           .select('user_id')

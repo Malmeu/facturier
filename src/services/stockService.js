@@ -23,10 +23,24 @@ export class StockService {
         return { success: false, error: 'Utilisateur non authentifié', data: [] };
       }
 
-      const storageKey = this.getUserStorageKey(user.id, 'products');
-      const products = this.getLocalData(storageKey);
-      
-      return { success: true, data: products };
+      // Charger depuis Supabase
+      const { data, error } = await supabase
+        .from('products')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        console.error('Erreur Supabase lors du chargement des produits:', error);
+        // Fallback vers localStorage
+        const storageKey = this.getUserStorageKey(user.id, 'products');
+        const localProducts = this.getLocalData(storageKey);
+        return { success: true, data: localProducts };
+      }
+
+      // Mapper les données depuis Supabase
+      const mappedData = data ? data.map(product => this.mapProductFromSupabase(product)) : [];
+      return { success: true, data: mappedData };
     } catch (error) {
       console.error('Erreur lors de la récupération des produits:', error);
       return { success: false, error: error.message, data: [] };
@@ -89,8 +103,11 @@ export class StockService {
       // Sauvegarder dans le stockage local
       localStorage.setItem(storageKey, JSON.stringify(products));
       
-      // TODO: Sauvegarder dans Supabase
-      await this.saveToSupabase('products', productWithMeta);
+      // Sauvegarder dans Supabase
+      const supabaseResult = await this.saveToSupabase('products', productWithMeta);
+      if (!supabaseResult.success) {
+        console.warn('Échec sauvegarde Supabase, données conservées en local:', supabaseResult.error);
+      }
       
       return { success: true, data: productWithMeta };
     } catch (error) {
@@ -228,10 +245,24 @@ export class StockService {
         return { success: false, error: 'Utilisateur non authentifié', data: [] };
       }
 
-      const storageKey = this.getUserStorageKey(user.id, 'suppliers');
-      const suppliers = this.getLocalData(storageKey);
-      
-      return { success: true, data: suppliers };
+      // Charger depuis Supabase
+      const { data, error } = await supabase
+        .from('suppliers')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        console.error('Erreur Supabase lors du chargement des fournisseurs:', error);
+        // Fallback vers localStorage
+        const storageKey = this.getUserStorageKey(user.id, 'suppliers');
+        const localSuppliers = this.getLocalData(storageKey);
+        return { success: true, data: localSuppliers };
+      }
+
+      // Mapper les données depuis Supabase
+      const mappedData = data ? data.map(supplier => this.mapSupplierFromSupabase(supplier)) : [];
+      return { success: true, data: mappedData };
     } catch (error) {
       console.error('Erreur lors de la récupération des fournisseurs:', error);
       return { success: false, error: error.message, data: [] };
@@ -269,6 +300,12 @@ export class StockService {
 
       // Sauvegarder dans le stockage local
       localStorage.setItem(storageKey, JSON.stringify(suppliers));
+      
+      // Sauvegarder dans Supabase
+      const supabaseResult = await this.saveToSupabase('suppliers', supplierWithMeta);
+      if (!supabaseResult.success) {
+        console.warn('Échec sauvegarde Supabase, données conservées en local:', supabaseResult.error);
+      }
       
       return { success: true, data: supplierWithMeta };
     } catch (error) {
@@ -487,11 +524,268 @@ export class StockService {
     }
   }
 
-  // Sauvegarder dans Supabase (placeholder pour implémentation future)
+  // Mapper les données du formulaire vers le schéma Supabase
+  static mapProductToSupabase(productData) {
+    return {
+      id: productData.id,
+      name: productData.name,
+      description: productData.description,
+      sku: productData.reference, // reference -> sku
+      category: productData.category,
+      unit_price: parseFloat(productData.sellingPrice) || 0, // sellingPrice -> unit_price
+      cost_price: parseFloat(productData.purchasePrice) || 0, // purchasePrice -> cost_price
+      stock_quantity: parseFloat(productData.currentStock) || 0, // currentStock -> stock_quantity
+      min_stock: parseFloat(productData.minStockLevel) || 0, // minStockLevel -> min_stock
+      max_stock: parseFloat(productData.maxStockLevel) || 0, // maxStockLevel -> max_stock
+      supplier_id: productData.supplierId || null,
+      supplier_name: productData.supplierName || null,
+      supplier_sku: productData.supplierSku || null,
+      user_id: productData.userId,
+      created_at: productData.createdAt,
+      updated_at: productData.updatedAt
+    };
+  }
+
+  // Mapper les données Supabase vers le format de l'application
+  static mapProductFromSupabase(supabaseData) {
+    return {
+      id: supabaseData.id,
+      name: supabaseData.name,
+      description: supabaseData.description,
+      reference: supabaseData.sku, // sku -> reference
+      category: supabaseData.category,
+      sellingPrice: supabaseData.unit_price, // unit_price -> sellingPrice
+      purchasePrice: supabaseData.cost_price, // cost_price -> purchasePrice
+      currentStock: supabaseData.stock_quantity, // stock_quantity -> currentStock
+      minStockLevel: supabaseData.min_stock, // min_stock -> minStockLevel
+      maxStockLevel: supabaseData.max_stock, // max_stock -> maxStockLevel
+      supplierId: supabaseData.supplier_id,
+      supplierName: supabaseData.supplier_name,
+      supplierSku: supabaseData.supplier_sku,
+      userId: supabaseData.user_id,
+      createdAt: supabaseData.created_at,
+      updatedAt: supabaseData.updated_at,
+      // Valeurs par défaut pour les champs non stockés en base
+      unit: 'unité',
+      trackInventory: true,
+      taxRate: 19,
+      hasVariants: false,
+      variants: [],
+      images: [],
+      attributes: {}
+    };
+  }
+
+  // Mapper les données des fournisseurs vers Supabase
+  static mapSupplierToSupabase(supplierData) {
+    return {
+      id: supplierData.id,
+      name: supplierData.name,
+      contact_name: supplierData.contactName,
+      email: supplierData.email,
+      phone: supplierData.phone,
+      address: supplierData.address,
+      city: supplierData.city,
+      postal_code: supplierData.postalCode,
+      country: supplierData.country,
+      tax_id: supplierData.taxId,
+      payment_terms: supplierData.paymentTerms,
+      currency: supplierData.currency || 'DZD',
+      user_id: supplierData.userId,
+      created_at: supplierData.createdAt,
+      updated_at: supplierData.updatedAt
+    };
+  }
+
+  // Mapper les données des fournisseurs depuis Supabase
+  static mapSupplierFromSupabase(supabaseData) {
+    return {
+      id: supabaseData.id,
+      name: supabaseData.name,
+      contactName: supabaseData.contact_name,
+      email: supabaseData.email,
+      phone: supabaseData.phone,
+      address: supabaseData.address,
+      city: supabaseData.city,
+      postalCode: supabaseData.postal_code,
+      country: supabaseData.country,
+      taxId: supabaseData.tax_id,
+      paymentTerms: supabaseData.payment_terms,
+      currency: supabaseData.currency,
+      userId: supabaseData.user_id,
+      createdAt: supabaseData.created_at,
+      updatedAt: supabaseData.updated_at
+    };
+  }
+
+  // Mapper les données des clients vers Supabase
+  static mapCustomerToSupabase(customerData) {
+    return {
+      id: customerData.id,
+      name: customerData.name,
+      email: customerData.email,
+      phone: customerData.phone,
+      address: customerData.address,
+      city: customerData.city,
+      postal_code: customerData.postalCode,
+      country: customerData.country,
+      tax_id: customerData.taxId,
+      payment_terms: customerData.paymentTerms,
+      credit_limit: parseFloat(customerData.creditLimit) || 0,
+      user_id: customerData.userId,
+      created_at: customerData.createdAt,
+      updated_at: customerData.updatedAt
+    };
+  }
+
+  // Mapper les données des clients depuis Supabase
+  static mapCustomerFromSupabase(supabaseData) {
+    return {
+      id: supabaseData.id,
+      name: supabaseData.name,
+      email: supabaseData.email,
+      phone: supabaseData.phone,
+      address: supabaseData.address,
+      city: supabaseData.city,
+      postalCode: supabaseData.postal_code,
+      country: supabaseData.country,
+      taxId: supabaseData.tax_id,
+      paymentTerms: supabaseData.payment_terms,
+      creditLimit: supabaseData.credit_limit,
+      userId: supabaseData.user_id,
+      createdAt: supabaseData.created_at,
+      updatedAt: supabaseData.updated_at
+    };
+  }
+
+  // Mapper les données des commandes vers Supabase
+  static mapOrderToSupabase(orderData) {
+    return {
+      id: orderData.id,
+      number: orderData.number,
+      date: orderData.date,
+      due_date: orderData.dueDate,
+      status: orderData.status,
+      customer_name: orderData.customerName,
+      customer_address: orderData.customerAddress,
+      customer_city: orderData.customerCity,
+      customer_postal_code: orderData.customerPostalCode,
+      customer_phone: orderData.customerPhone,
+      customer_email: orderData.customerEmail,
+      customer_country: orderData.customerCountry,
+      subtotal: parseFloat(orderData.subtotal) || 0,
+      tax_amount: parseFloat(orderData.taxAmount) || 0,
+      total: parseFloat(orderData.total) || 0,
+      notes: orderData.notes,
+      user_id: orderData.userId,
+      created_at: orderData.createdAt,
+      updated_at: orderData.updatedAt
+    };
+  }
+
+  // Mapper les données des commandes depuis Supabase
+  static mapOrderFromSupabase(supabaseData) {
+    return {
+      id: supabaseData.id,
+      number: supabaseData.number,
+      date: supabaseData.date,
+      dueDate: supabaseData.due_date,
+      status: supabaseData.status,
+      customerName: supabaseData.customer_name,
+      customerAddress: supabaseData.customer_address,
+      customerCity: supabaseData.customer_city,
+      customerPostalCode: supabaseData.customer_postal_code,
+      customerPhone: supabaseData.customer_phone,
+      customerEmail: supabaseData.customer_email,
+      customerCountry: supabaseData.customer_country,
+      subtotal: supabaseData.subtotal,
+      taxAmount: supabaseData.tax_amount,
+      total: supabaseData.total,
+      notes: supabaseData.notes,
+      userId: supabaseData.user_id,
+      createdAt: supabaseData.created_at,
+      updatedAt: supabaseData.updated_at
+    };
+  }
+
+  // Mapper les données des bons de livraison vers Supabase
+  static mapDeliveryToSupabase(deliveryData) {
+    return {
+      id: deliveryData.id,
+      number: deliveryData.number,
+      date: deliveryData.date,
+      status: deliveryData.status,
+      customer_name: deliveryData.customerName,
+      customer_address: deliveryData.customerAddress,
+      customer_city: deliveryData.customerCity,
+      customer_postal_code: deliveryData.customerPostalCode,
+      customer_phone: deliveryData.customerPhone,
+      customer_email: deliveryData.customerEmail,
+      customer_country: deliveryData.customerCountry,
+      delivery_address: deliveryData.deliveryAddress,
+      delivery_city: deliveryData.deliveryCity,
+      delivery_postal_code: deliveryData.deliveryPostalCode,
+      delivery_country: deliveryData.deliveryCountry,
+      notes: deliveryData.notes,
+      user_id: deliveryData.userId,
+      created_at: deliveryData.createdAt,
+      updated_at: deliveryData.updatedAt
+    };
+  }
+
+  // Mapper les données des bons de livraison depuis Supabase
+  static mapDeliveryFromSupabase(supabaseData) {
+    return {
+      id: supabaseData.id,
+      number: supabaseData.number,
+      date: supabaseData.date,
+      status: supabaseData.status,
+      customerName: supabaseData.customer_name,
+      customerAddress: supabaseData.customer_address,
+      customerCity: supabaseData.customer_city,
+      customerPostalCode: supabaseData.customer_postal_code,
+      customerPhone: supabaseData.customer_phone,
+      customerEmail: supabaseData.customer_email,
+      customerCountry: supabaseData.customer_country,
+      deliveryAddress: supabaseData.delivery_address,
+      deliveryCity: supabaseData.delivery_city,
+      deliveryPostalCode: supabaseData.delivery_postal_code,
+      deliveryCountry: supabaseData.delivery_country,
+      notes: supabaseData.notes,
+      userId: supabaseData.user_id,
+      createdAt: supabaseData.created_at,
+      updatedAt: supabaseData.updated_at
+    };
+  }
+
+  // Sauvegarder dans Supabase
   static async saveToSupabase(table, data) {
     try {
-      console.log(`Sauvegarde dans Supabase (${table}):`, data.id);
-      // TODO: Implémenter la sauvegarde dans Supabase
+      let mappedData = data;
+      
+      // Mapper les données selon la table
+      if (table === 'products') {
+        mappedData = this.mapProductToSupabase(data);
+      } else if (table === 'suppliers') {
+        mappedData = this.mapSupplierToSupabase(data);
+      } else if (table === 'customers') {
+        mappedData = this.mapCustomerToSupabase(data);
+      } else if (table === 'orders') {
+        mappedData = this.mapOrderToSupabase(data);
+      } else if (table === 'deliveries') {
+        mappedData = this.mapDeliveryToSupabase(data);
+      }
+      
+      const { error } = await supabase
+        .from(table)
+        .upsert(mappedData, { onConflict: 'id' });
+      
+      if (error) {
+        console.error(`Erreur Supabase (${table}):`, error);
+        return { success: false, error: error.message };
+      }
+      
+      console.log(`✅ Sauvegardé dans Supabase (${table}):`, data.id);
       return { success: true };
     } catch (error) {
       console.error('Erreur lors de la sauvegarde dans Supabase:', error);
@@ -499,11 +793,20 @@ export class StockService {
     }
   }
 
-  // Supprimer de Supabase (placeholder pour implémentation future)
+  // Supprimer de Supabase
   static async deleteFromSupabase(table, id) {
     try {
-      console.log(`Suppression de Supabase (${table}):`, id);
-      // TODO: Implémenter la suppression dans Supabase
+      const { error } = await supabase
+        .from(table)
+        .delete()
+        .eq('id', id);
+      
+      if (error) {
+        console.error(`Erreur suppression Supabase (${table}):`, error);
+        return { success: false, error: error.message };
+      }
+      
+      console.log(`✅ Supprimé de Supabase (${table}):`, id);
       return { success: true };
     } catch (error) {
       console.error('Erreur lors de la suppression dans Supabase:', error);
