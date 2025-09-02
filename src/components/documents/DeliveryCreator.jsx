@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react'
-import { Truck, Save, Download, Plus, Trash2, Upload, Image, Palette } from 'lucide-react'
+import { Truck, Save, Download, Plus, Trash2, Upload, Image, Palette, Search, User } from 'lucide-react'
 import { PDFGenerator } from '../../utils/pdfGenerator'
 import { PrintManager } from '../../utils/printManager'
 import { documentTemplates, LogoManager, SettingsManager, TemplateUtils } from '../../utils/templateSystem'
 import WYSIWYGEditor from '../common/WYSIWYGEditor'
 import { DataService } from '../../services/dataService'
 import { useAuth } from '../../contexts/AuthContext'
+import ClientAutocomplete from '../clients/ClientAutocomplete'
 
 const DeliveryCreator = ({ currentLang, languages }) => {
   const { user } = useAuth()
@@ -369,6 +370,31 @@ const DeliveryCreator = ({ currentLang, languages }) => {
             {/* Recipient Info */}
             <div className="bg-white rounded-lg shadow-sm border p-6">
               <h3 className="text-lg font-medium text-gray-900 mb-4">Destinataire</h3>
+              
+              {/* Client Autocomplete */}
+              <div className="mb-4">
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Rechercher un client existant
+                </label>
+                <ClientAutocomplete 
+                  onClientSelect={(client) => {
+                    // Remplir automatiquement les champs du destinataire avec les données du client
+                    setDelivery(prev => ({
+                      ...prev,
+                      recipient: {
+                        name: client.name,
+                        address: client.address || '',
+                        city: client.city || '',
+                        postalCode: client.postal_code || '',
+                        phone: client.phone || '',
+                        email: client.email || ''
+                      }
+                    }));
+                  }}
+                  placeholder="Rechercher un client par nom, entreprise ou email..."
+                />
+              </div>
+              
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Nom du destinataire</label>

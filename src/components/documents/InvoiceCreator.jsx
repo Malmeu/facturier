@@ -12,7 +12,8 @@ import {
   Printer,
   Upload,
   Image,
-  Palette
+  Palette,
+  Search
 } from 'lucide-react'
 import { format } from 'date-fns'
 import { fr, ar } from 'date-fns/locale'
@@ -23,6 +24,7 @@ import { documentTemplates, LogoManager, SettingsManager, TemplateUtils } from '
 import WYSIWYGEditor from '../common/WYSIWYGEditor'
 import { DataService } from '../../services/dataService'
 import { useAuth } from '../../contexts/AuthContext'
+import ClientAutocomplete from '../clients/ClientAutocomplete'
 
 const InvoiceCreator = ({ currentLang, languages }) => {
   const { user } = useAuth()
@@ -676,6 +678,31 @@ const InvoiceCreator = ({ currentLang, languages }) => {
                 <User className="w-5 h-5 mr-2" />
                 Informations client
               </h2>
+              
+              {/* Client Autocomplete */}
+              <div className="mb-4">
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Rechercher un client existant
+                </label>
+                <ClientAutocomplete 
+                  onClientSelect={(client) => {
+                    // Remplir automatiquement les champs du client
+                    setInvoice(prev => ({
+                      ...prev,
+                      customer: {
+                        name: client.name || '',
+                        address: client.address || '',
+                        city: client.city || '',
+                        postalCode: client.postal_code || '',
+                        phone: client.phone || '',
+                        email: client.email || ''
+                      }
+                    }));
+                  }}
+                  placeholder="Rechercher un client par nom, entreprise ou email..."
+                />
+              </div>
+              
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="md:col-span-2">
                   <label className="block text-sm font-medium text-gray-700 mb-1">

@@ -504,7 +504,7 @@ export class DataService {
   // Clear all user data (for logout)
   static async clearUserData(userId) {
     try {
-      const documentTypes = ['invoices', 'orders', 'deliveries']
+      const documentTypes = ['invoices', 'orders', 'deliveries', 'clients']
       
       documentTypes.forEach(type => {
         const storageKey = this.getUserStorageKey(userId, type)
@@ -519,6 +519,196 @@ export class DataService {
       return { success: true }
     } catch (error) {
       console.error('Error clearing user data:', error)
+      return { success: false, error: error.message }
+    }
+  }
+
+  // ===== GESTION DES CLIENTS =====
+
+  // Créer ou mettre à jour un client
+  static async saveClient(client) {
+    try {
+      const user = await this.getCurrentUser()
+      
+      if (!user) {
+        throw new Error('Utilisateur non authentifié')
+      }
+
+      // Ajouter les métadonnées
+      const clientWithMeta = {
+        ...client,
+        id: client.id || Date.now().toString(),
+        user_id: user.id,
+        updated_at: new Date().toISOString(),
+        created_at: client.created_at || new Date().toISOString()
+      }
+
+      // Enregistrer dans Supabase
+      const { data, error } = await supabase
+        .from('clients')
+        .upsert([clientWithMeta])
+        .select()
+
+      if (error) {
+        console.error('Erreur lors de l\'enregistrement du client dans Supabase:', error)
+        
+        // Fallback: enregistrer dans localStorage
+        const storageKey = this.getUserStorageKey(user.id, 'clients')
+        const existingClients = this.getLocalDocuments(storageKey)
+        
+        const existingIndex = existingClients.findIndex(c => c.id === clientWithMeta.id)
+        if (existingIndex >= 0) {
+          existingClients[existingIndex] = clientWithMeta
+        } else {
+          existingClients.push(clientWithMeta)
+        }
+        
+        localStorage.setItem(storageKey, JSON.stringify(existingClients))
+        return { success: true, data: clientWithMeta, source: 'localStorage' }
+      }
+      
+      console.log('Client enregistré dans Supabase:', data)
+      return { success: true, data: data[0], source: 'supabase' }
+    } catch (error) {
+      console.error('Erreur lors de l\'enregistrement du client:', error)
+      return { success: false, error: error.message }
+    }
+  }
+
+  // Récupérer tous les clients d'un utilisateur
+  static async getClients() {
+    try {
+      const user = await this.getCurrentUser()
+      
+      if (!user) {
+        return { success: false, error: 'Utilisateur non authentifié', data: [] }
+      }
+
+      // Récupérer depuis Supabase
+      const { data: supabaseData, error } = await supabase
+        .from('clients')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('name', { ascending: true })
+      
+      if (error) {
+        console.error('Erreur lors de la récupération des clients depuis Supabase:', error)
+      }
+      
+      // Récupérer également depuis localStorage
+      const storageKey = this.getUserStorageKey(user.id, 'clients')
+      const localClients = this.getLocalDocuments(storageKey)
+      
+      // Fusionner les données (priorité à Supabase)
+      const supabaseIds = (supabaseData || []).map(client => client.id)
+      const uniqueLocalClients = localClients.filter(client => !supabaseIds.includes(client.id))
+      
+      const allClients = [...(supabaseData || []), ...uniqueLocalClients]
+      
+      return { success: true, data: allClients }
+    } catch (error) {
+      console.error('Erreur lors de la récupération des clients:', error)
+      return { success: false, error: error.message, data: [] }
+    }
+  }
+
+  // Récupérer un client par son ID
+  static async getClientById(clientId) {
+    try {
+      const user = await this.getCurrentUser()
+      
+      if (!user) {
+        return { success: false, error: 'Utilisateur non authentifié', data: null }
+      }
+
+      // Chercher dans Supabase
+      const { data, error } = await supabase
+        .from('clients')
+        .select('*')
+        .eq('id', clientId)
+        .eq('user_id', user.id)
+        .single()
+      
+      if (error) {
+        console.error('Erreur lors de la récupération du client depuis Supabase:', error)
+        
+        // Fallback: chercher dans localStorage
+        const storageKey = this.getUserStorageKey(user.id, 'clients')
+        const localClients = this.getLocalDocuments(storageKey)
+        const localClient = localClients.find(client => client.id === clientId)
+        
+        if (localClient) {
+          return { success: true, data: localClient, source: 'localStorage' }
+        }
+        
+        return { success: false, error: 'Client non trouvé', data: null }
+      }
+      
+      return { success: true, data, source: 'supabase' }
+    } catch (error) {
+      console.error('Erreur lors de la récupération du client:', error)
+      return { success: false, error: error.message, data: null }
+    }
+  }
+
+  // Rechercher des clients par nom ou email
+  static async searchClients(query) {
+    try {
+      const user = await this.getCurrentUser()
+      
+      if (!user) {
+        return { success: false, error: 'Utilisateur non authentifié', data: [] }
+      }
+
+      // Recherche insensible à la casse
+      const searchQuery = query.toLowerCase()
+      
+      // Récupérer tous les clients
+      const { data: allClients } = await this.getClients()
+      
+      // Filtrer les résultats
+      const filteredClients = allClients.filter(client => 
+        client.name?.toLowerCase().includes(searchQuery) ||
+        client.email?.toLowerCase().includes(searchQuery) ||
+        client.company_name?.toLowerCase().includes(searchQuery)
+      )
+      
+      return { success: true, data: filteredClients }
+    } catch (error) {
+      console.error('Erreur lors de la recherche de clients:', error)
+      return { success: false, error: error.message, data: [] }
+    }
+  }
+
+  // Supprimer un client
+  static async deleteClient(clientId) {
+    try {
+      const user = await this.getCurrentUser()
+      
+      if (!user) {
+        throw new Error('Utilisateur non authentifié')
+      }
+
+      // Supprimer de Supabase
+      const { error } = await supabase
+        .from('clients')
+        .delete()
+        .eq('id', clientId)
+        .eq('user_id', user.id)
+      
+      if (error) {
+        console.error('Erreur lors de la suppression du client dans Supabase:', error)
+      }
+      
+      // Supprimer également de localStorage
+      const storageKey = this.getUserStorageKey(user.id, 'clients')
+      const localClients = this.getLocalDocuments(storageKey)
+      const filteredClients = localClients.filter(client => client.id !== clientId)
+      localStorage.setItem(storageKey, JSON.stringify(filteredClients))
+      
+      return { success: true }
+    } catch (error) {
+      console.error('Erreur lors de la suppression du client:', error)
       return { success: false, error: error.message }
     }
   }

@@ -17,7 +17,8 @@ import {
   Users,
   CreditCard,
   LineChart,
-  Database
+  Database,
+  UserPlus
 } from 'lucide-react'
 import { useAuth } from '../../contexts/AuthContext'
 
@@ -40,6 +41,7 @@ const Navigation = ({ currentLang, setCurrentLang, languages }) => {
 
   const authenticatedNavItems = [
     { path: '/dashboard', icon: BarChart3, label: 'Dashboard' },
+    { path: '/clients', icon: UserPlus, label: 'Clients' },
     { path: '/stock', icon: Package, label: 'Stock' },
     { path: '/suppliers', icon: Users, label: 'Fournisseurs' },
     { path: '/payments', icon: CreditCard, label: 'Paiements' },

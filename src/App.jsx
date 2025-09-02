@@ -19,6 +19,7 @@ import SupplierManagement from './components/stock/SupplierManagement'
 import PaymentManagement from './components/billing/PaymentManagement'
 import AnalyticsDashboard from './components/reports/Dashboard'
 import SupabaseMigration from './components/settings/SupabaseMigration'
+import ClientManager from './components/clients/ClientManager'
 
 import './App.css'
 
@@ -273,6 +274,17 @@ function App() {
             />
             
             {/* Nouveaux modules */}
+            <Route 
+              path="/clients" 
+              element={
+                <ProtectedRoute>
+                  <ClientManager 
+                    currentLang={currentLang} 
+                    languages={languages}
+                  />
+                </ProtectedRoute>
+              } 
+            />
             <Route 
               path="/stock" 
               element={
