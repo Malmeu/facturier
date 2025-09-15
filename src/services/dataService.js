@@ -267,11 +267,14 @@ export class DataService {
         number: document.number,
         date: document.date,
         due_date: document.dueDate,
+        title: document.title, // Nouveau champ titre
         subtotal: document.subtotal,
         global_discount: document.globalDiscount,
         global_discount_amount: document.globalDiscountAmount,
         tax_rate: document.taxRate,
         tax_amount: document.taxAmount,
+        stamp_duty: document.stampDuty, // Nouveau champ timbre fiscal
+        stamp_duty_amount: document.stampDutyAmount, // Nouveau champ montant du timbre
         total: document.total,
         notes: document.notes,
         terms: document.terms,
@@ -313,6 +316,8 @@ export class DataService {
         docForSupabase.customer_postal_code = docForSupabase.customer.postalCode;
         docForSupabase.customer_phone = docForSupabase.customer.phone;
         docForSupabase.customer_email = docForSupabase.customer.email;
+        docForSupabase.customer_rc = docForSupabase.customer.rc; // Nouveau champ RC
+        docForSupabase.customer_nif = docForSupabase.customer.nif; // Nouveau champ NIF
         delete docForSupabase.customer;
       }
       

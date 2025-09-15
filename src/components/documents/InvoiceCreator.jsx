@@ -36,6 +36,7 @@ const InvoiceCreator = ({ currentLang, languages }) => {
     number: AlgerianFormatting.generateDocumentNumber('FAC'),
     date: format(new Date(), 'yyyy-MM-dd'),
     dueDate: format(new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), 'yyyy-MM-dd'),
+    title: 'FACTURE POUR PRESTATION DE SERVICES', // Nouveau champ titre de la facture
     
     // Company details
     company: {
@@ -43,7 +44,7 @@ const InvoiceCreator = ({ currentLang, languages }) => {
       address: '',
       city: '',
       postalCode: '',
-      taxId: '',
+      taxId: '', // Sera utilisé pour RCS
       phone: '',
       email: '',
       country: 'Algérie'
@@ -56,7 +57,10 @@ const InvoiceCreator = ({ currentLang, languages }) => {
       city: '',
       postalCode: '',
       phone: '',
-      email: ''
+      email: '',
+      rc: '', // Nouveau champ RC pour le client
+      nif: '', // Nouveau champ NIF pour le client
+      art: '' // Nouveau champ ART pour le client
     },
     
     // Items
@@ -76,6 +80,8 @@ const InvoiceCreator = ({ currentLang, languages }) => {
     globalDiscountAmount: 0, // Calculated global discount amount
     taxRate: AlgerianDefaults.company.taxRate, // 19% TVA Algeria
     taxAmount: 0,
+    stampDuty: 0, // Nouveau champ pour le timbre fiscal en pourcentage
+    stampDutyAmount: 0, // Montant calculé du timbre fiscal
     total: 0,
     
     // Additional fields
@@ -147,15 +153,17 @@ const InvoiceCreator = ({ currentLang, languages }) => {
     const subtotalAfterGlobalDiscount = subtotal - globalDiscountAmount
     const taxAmount = subtotalAfterGlobalDiscount * (invoice.taxRate / 100)
     const total = subtotalAfterGlobalDiscount + taxAmount
+    const stampDutyAmount = total * (invoice.stampDuty / 100)
     
     setInvoice(prev => ({
       ...prev,
       subtotal,
       globalDiscountAmount,
       taxAmount,
+      stampDutyAmount,
       total
     }))
-  }, [invoice.items, invoice.taxRate, invoice.globalDiscount])
+  }, [invoice.items, invoice.taxRate, invoice.globalDiscount, invoice.stampDuty])
 
   const updateInvoiceField = (field, value) => {
     setInvoice(prev => ({
@@ -542,6 +550,20 @@ const InvoiceCreator = ({ currentLang, languages }) => {
             {/* Invoice Details */}
             <div className="bg-white rounded-lg shadow-sm border p-6">
               <h2 className="text-lg font-semibold text-gray-900 mb-4">Détails de la facture</h2>
+              <div className="grid grid-cols-1 gap-4 mb-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Titre de la facture
+                  </label>
+                  <input
+                    type="text"
+                    value={invoice.title}
+                    onChange={(e) => updateInvoiceField('title', e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    placeholder="FACTURE POUR PRESTATION DE SERVICES"
+                  />
+                </div>
+              </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -643,7 +665,7 @@ const InvoiceCreator = ({ currentLang, languages }) => {
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    NIF/RC
+                    RCS
                   </label>
                   <input
                     type="text"
@@ -772,6 +794,39 @@ const InvoiceCreator = ({ currentLang, languages }) => {
                     type="email"
                     value={invoice.customer.email}
                     onChange={(e) => updateCustomerField('email', e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    RC
+                  </label>
+                  <input
+                    type="text"
+                    value={invoice.customer.rc}
+                    onChange={(e) => updateCustomerField('rc', e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    NIF
+                  </label>
+                  <input
+                    type="text"
+                    value={invoice.customer.nif}
+                    onChange={(e) => updateCustomerField('nif', e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    ART
+                  </label>
+                  <input
+                    type="text"
+                    value={invoice.customer.art}
+                    onChange={(e) => updateCustomerField('art', e.target.value)}
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                   />
                 </div>
@@ -981,6 +1036,50 @@ const InvoiceCreator = ({ currentLang, languages }) => {
               </div>
             </div>
 
+            {/* Stamp Duty */}
+            <div className="bg-white rounded-lg shadow-sm border p-6">
+              <h2 className="text-lg font-semibold text-gray-900 mb-4">Timbre fiscal</h2>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Timbre (%)
+                  </label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    max="10"
+                    value={invoice.stampDuty}
+                    onChange={(e) => updateInvoiceField('stampDuty', parseFloat(e.target.value) || 0)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    placeholder="0"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Montant du timbre (DZD)
+                  </label>
+                  <input
+                    type="text"
+                    value={invoice.stampDutyAmount?.toFixed(2) || '0.00'}
+                    readOnly
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-100 text-blue-600 font-medium"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Total avec timbre (DZD)
+                  </label>
+                  <input
+                    type="text"
+                    value={(invoice.total + (invoice.stampDutyAmount || 0)).toFixed(2)}
+                    readOnly
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-100 font-medium"
+                  />
+                </div>
+              </div>
+            </div>
+
             {/* Payment Status */}
             <div className="bg-white rounded-lg shadow-sm border p-6">
               <h2 className="text-lg font-semibold text-gray-900 mb-4">Statut de paiement</h2>
@@ -1127,6 +1226,12 @@ const InvoiceCreator = ({ currentLang, languages }) => {
                       <p className="text-sm">Échéance: {invoice.dueDate}</p>
                     </div>
                   </div>
+                  
+                  {invoice.title && (
+                    <div className="text-center mt-4 mb-2">
+                      <h2 className="text-xl font-semibold">{invoice.title}</h2>
+                    </div>
+                  )}
                 </div>
 
                 {/* Company and Customer Info */}
@@ -1137,7 +1242,7 @@ const InvoiceCreator = ({ currentLang, languages }) => {
                       <p className="font-medium">{invoice.company.name || 'Nom de l\'entreprise'}</p>
                       <p>{invoice.company.address}</p>
                       <p>{invoice.company.city} {invoice.company.postalCode}</p>
-                      <p>NIF: {invoice.company.taxId}</p>
+                      <p>RCS: {invoice.company.taxId}</p>
                       <p>{invoice.company.phone}</p>
                       <p>{invoice.company.email}</p>
                     </div>
@@ -1150,6 +1255,9 @@ const InvoiceCreator = ({ currentLang, languages }) => {
                       <p>{invoice.customer.city} {invoice.customer.postalCode}</p>
                       <p>{invoice.customer.phone}</p>
                       <p>{invoice.customer.email}</p>
+                      {invoice.customer.rc && <p><strong>RC:</strong> {invoice.customer.rc}</p>}
+                      {invoice.customer.nif && <p><strong>NIF:</strong> {invoice.customer.nif}</p>}
+                      {invoice.customer.art && <p><strong>ART:</strong> {invoice.customer.art}</p>}
                     </div>
                   </div>
                 </div>
@@ -1233,9 +1341,15 @@ const InvoiceCreator = ({ currentLang, languages }) => {
                       <span>TVA ({invoice.taxRate}%):</span>
                       <span>{AlgerianFormatting.formatCurrency(invoice.taxAmount)}</span>
                     </div>
+                    {invoice.stampDuty > 0 && (
+                      <div className="flex justify-between py-1" style={{ color: '#d1e7ff' }}>
+                        <span>Timbre ({invoice.stampDuty}%):</span>
+                        <span>{AlgerianFormatting.formatCurrency(invoice.stampDutyAmount)}</span>
+                      </div>
+                    )}
                     <div className="flex justify-between py-2 border-t-2 border-white border-opacity-30 font-bold text-lg">
                       <span>Total:</span>
-                      <span>{AlgerianFormatting.formatCurrency(invoice.total)}</span>
+                      <span>{AlgerianFormatting.formatCurrency(invoice.total + invoice.stampDutyAmount)}</span>
                     </div>
                   </div>
                 </div>

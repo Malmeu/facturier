@@ -283,6 +283,13 @@ export class PrintManager {
             </div>
           </div>
         </div>
+        
+        ${invoice.title ? `
+        <!-- Invoice Title -->
+        <div style="text-align: center; margin: 20px 0;">
+          <h2 style="font-size: 18px; font-weight: bold;">${invoice.title}</h2>
+        </div>
+        ` : ''}
 
         <!-- Company and Customer Info -->
         <div style="display: flex; justify-content: space-between; margin: 30px 0; gap: 20px;">
@@ -293,7 +300,7 @@ export class PrintManager {
             <div><strong>${invoice.company.name || "Nom de l'entreprise"}</strong></div>
             <div>${invoice.company.address || ''}</div>
             <div>${invoice.company.city || ''} ${invoice.company.postalCode || ''}</div>
-            ${invoice.company.taxId ? `<div>NIF: ${invoice.company.taxId}</div>` : ''}
+            ${invoice.company.taxId ? `<div>RCS: ${invoice.company.taxId}</div>` : ''}
             <div>${invoice.company.phone || ''}</div>
             <div>${invoice.company.email || ''}</div>
           </div>
@@ -306,6 +313,9 @@ export class PrintManager {
             <div>${invoice.customer.city || ''} ${invoice.customer.postalCode || ''}</div>
             <div>${invoice.customer.phone || ''}</div>
             <div>${invoice.customer.email || ''}</div>
+            ${invoice.customer.rc ? `<div>RC: ${invoice.customer.rc}</div>` : ''}
+            ${invoice.customer.nif ? `<div>NIF: ${invoice.customer.nif}</div>` : ''}
+            ${invoice.customer.art ? `<div>ART: ${invoice.customer.art}</div>` : ''}
           </div>
         </div>
 
@@ -376,9 +386,15 @@ export class PrintManager {
               <span>TVA (${invoice.taxRate}%):</span>
               <span>${invoice.taxAmount.toFixed(2)} DZD</span>
             </div>
+            ${invoice.stampDuty > 0 ? `
+            <div style="display: flex; justify-content: space-between; margin: 5px 0; color: #d1e7ff;">
+              <span>Timbre (${invoice.stampDuty}%):</span>
+              <span>${invoice.stampDutyAmount.toFixed(2)} DZD</span>
+            </div>
+            ` : ''}
             <div style="display: flex; justify-content: space-between; margin: 10px 0; padding: 10px 0; font-size: 18px; font-weight: bold; border-top: 2px solid rgba(255,255,255,0.3); color: white;">
               <span>TOTAL:</span>
-              <span>${invoice.total.toFixed(2)} DZD</span>
+              <span>${(invoice.total + (invoice.stampDutyAmount || 0)).toFixed(2)} DZD</span>
             </div>
           </div>
         </div>

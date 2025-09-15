@@ -13,16 +13,22 @@ class UniversalDataService {
       tableName: 'orders',
       itemTable: 'order_items',
       camelCase: {
+        title: 'title',
         dueDate: 'due_date',
         globalDiscount: 'global_discount',
         globalDiscountAmount: 'global_discount_amount',
         taxRate: 'tax_rate',
         taxAmount: 'tax_amount',
+        stampDuty: 'stamp_duty',
+        stampDutyAmount: 'stamp_duty_amount',
         isPaid: 'is_paid',
         paidDate: 'paid_date',
         userId: 'user_id',
         createdAt: 'created_at',
-        updatedAt: 'updated_at'
+        updatedAt: 'updated_at',
+        'customer.rc': 'customer_rc',
+        'customer.nif': 'customer_nif',
+        'customer.art': 'customer_art'
       }
     },
     deliveries: {
